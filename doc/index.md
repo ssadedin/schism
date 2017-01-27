@@ -35,13 +35,7 @@ rather just that the sequence in the read departs from the reference sequence.
 
 ## Building
 
-Schism requires only Java 1.7+ to build and run. Please use the following commands:
-
-```
-git checkout http://github.com/ssadedin/schism
-cd schism
-./gradlew jar
-```
+Schism requires only Java 1.7+ to build and run. There is no build step.
 
 ## Running Schism
 
