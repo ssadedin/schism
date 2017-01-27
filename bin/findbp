@@ -1,0 +1,16 @@
+#!/bin/bash
+
+BASE=$(cd `dirname $0`/..; pwd)
+
+GROOVY_HOME="$BASE/tools/groovy/2.4.6"
+CP="$BASE/lib/*:$BASE/src/main/groovy"
+
+: ${JAVA_MEM:="8g"}
+# Broad Institute
+# : ${SCHISM_REF:="/seq/references/Homo_sapiens_assembly19/v1/Homo_sapiens_assembly19.fasta"}
+: ${SCHISM_REF:=""}
+
+JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
+$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/FindNovelBreakpoints \
+       $*
+

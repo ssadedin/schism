@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BASE=$(cd `dirname $0`/..; pwd)
+
+WORK="/home/unix/ssadedin/work"
+GROOVY_HOME="/home/unix/ssadedin/.sdkman/candidates/groovy/2.4.6"
+GNGS_JAR="$WORK/tools/groovy-ngs-utils/groovy-ngs-utils.jar"
+ORMLITE="$WORK/tools/ormlite"
+CP="$BASE/lib/*:$BASE/src/main/groovy"
+
+: ${JAVA_MEM:="8g"}
+: ${REF:="/seq/references/Homo_sapiens_assembly19/v1/Homo_sapiens_assembly19.fasta"}
+
+JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$REF" \
+groovy -cp $CP $BASE/src/main/groovy/CombineBreakpointDBs \
+       $*
+
