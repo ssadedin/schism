@@ -19,6 +19,10 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 //import Long as BreakpointId
 //import String as SampleId
 
+/**
+ * An actor that acts as a sink for breakpoint events that writes them
+ * to a database.
+ */
 @Log
 class WriteBreakpointDBActor extends DefaultActor {
     
