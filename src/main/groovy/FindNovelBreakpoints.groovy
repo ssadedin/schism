@@ -49,7 +49,13 @@ class FindNovelBreakpoints extends DefaultActor {
     String sample = null
     
     List<String> excludeSamples
+	
+	List<Sql> databaseConnections
     
+	/**
+	 * The output to write to - an object supporting println
+	 * (PrintStream, Writer, etc)
+	 */
     def output
     
     /**
@@ -80,6 +86,8 @@ class FindNovelBreakpoints extends DefaultActor {
             db.cacheStatements = true
             db
         }
+		
+		this.databaseConnections = dbs
         
         log.info "Checking bam file $bamFile"
         bam = new SAM(bamFile)
@@ -397,6 +405,23 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Partnering ${breakpoints.size()} breakpoints ..."
         this.partnerBreakpoints()
     }
+	
+	/**
+	 * Close database connections
+	 */
+	void close() {
+		if(this.databaseConnections) {
+			databaseConnections.each { db ->
+				try {
+					db.close()
+				}
+				catch(Exception e) {
+					// Ignore	
+					log.warning("Failed to close database connection: " + e)
+				}
+			}
+		}
+	}
     
     static void main(String [] args) {
         Cli cli = new Cli(usage: "FindNovelBreakpoints <options>")
@@ -435,40 +460,44 @@ class FindNovelBreakpoints extends DefaultActor {
             
         SAM bam = new SAM(opts.bam)
         FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, opts.bam, dbFiles).start()
-        
-        if(opts.ref) {
-            if(opts.ref == "auto") {
-                // hack: if we are using CRAM we can just use the same reference as for that.
-                fnb.reference = new FASTA(System.getProperty("samjdk.reference_fasta"))
-                
-                // TODO: if no property, get reference from BAM file?
-            }
-            else 
-                fnb.reference = new FASTA(opts.ref)
-        }
-        
-        RefGenes refGene = RefGenes.download(bam.sniffGenomeBuild())
-        Regions regions = resolveRegions(refGene, bam, opts)
-        fnb.refGene = refGene
-        
-        if(regions) {
-            fnb.run(regions)
-        }
-        else {
-            fnb.run()
-        }
-            
-        fnb.log.info(" Summary ".center(100,"="))
-        fnb.log.info "Unfiltered breakpoint candidates: " + fnb.total
-        fnb.log.info "Common breakpoints: " + fnb.tooCommon
-        fnb.log.info "Reportable breakpoints: " + fnb.nonFiltered
-        fnb.log.info "Partnered breakpoints: " + fnb.partnered
-        fnb.log.info("="*100)
-
-        fnb.outputBreakpoints()
-        
-        if(opts.o)
-            fnb.output.close()
+		try {
+	        if(opts.ref) {
+	            if(opts.ref == "auto") {
+	                // hack: if we are using CRAM we can just use the same reference as for that.
+	                fnb.reference = new FASTA(System.getProperty("samjdk.reference_fasta"))
+	                
+	                // TODO: if no property, get reference from BAM file?
+	            }
+	            else 
+	                fnb.reference = new FASTA(opts.ref)
+	        }
+	        
+	        RefGenes refGene = RefGenes.download(bam.sniffGenomeBuild())
+	        Regions regions = resolveRegions(refGene, bam, opts)
+	        fnb.refGene = refGene
+	        
+	        if(regions) {
+	            fnb.run(regions)
+	        }
+	        else {
+	            fnb.run()
+	        }
+	            
+	        fnb.log.info(" Summary ".center(100,"="))
+	        fnb.log.info "Unfiltered breakpoint candidates: " + fnb.total
+	        fnb.log.info "Common breakpoints: " + fnb.tooCommon
+	        fnb.log.info "Reportable breakpoints: " + fnb.nonFiltered
+	        fnb.log.info "Partnered breakpoints: " + fnb.partnered
+	        fnb.log.info("="*100)
+	
+	        fnb.outputBreakpoints()
+	        
+	        if(opts.o)
+	            fnb.output.close()
+		}
+		finally {
+			fnb.close()
+		}
     }
     
     static Regions resolveRegions(RefGenes refGene, SAM bam, OptionAccessor opts) {
