@@ -250,7 +250,7 @@ class CreateBreakpointDB {
         
         List regionValues = []
         if(opts.regions) 
-            regionValues opts.regions
+            regionValues = opts.regions
         else {
             // Use all the contigs in the first BAM file
             regionValues = bams[0].contigs*.key.grep { !Region.isMinorContig(it) }
