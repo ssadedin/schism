@@ -207,7 +207,7 @@ class BuildBreakpointDB {
         BasicConfigurator.configure()
         Logger.getRootLogger().setLevel(Level.INFO);
         
-        Cli cli = new Cli()
+        Cli cli = new Cli(usage:"builddb <options> <bam file 1> [<bam file 2> ...]")
         cli.with {
             bam 'BAM file(s) to process', args:Cli.UNLIMITED
             db 'SQLite database to create', args:1, required:true
