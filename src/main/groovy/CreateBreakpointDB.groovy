@@ -27,7 +27,7 @@ class CreateBreakpointDB {
         
         Banner.banner()
         
-        Cli cli = new Cli()
+        Cli cli = new Cli(usage:"builddb <options> <bam file 1> [<bam file 2> ...]")
         cli.with {
             db 'Database file to create', args: 1, required: true
             chunkSize 'Size of chunks to process genome in', args:1, required:false
@@ -246,7 +246,6 @@ class CreateBreakpointDB {
     }
     
     static List<Region> resolveRegions(OptionAccessor opts, List<SAM> bams) {
-        
         
         List regionValues = []
         if(opts.regions) 
