@@ -44,5 +44,5 @@ with exome data, for detecting events that fall into the covered regions.
 
 ## Sounds good, how do I use it?
 
-Have a look at the [documentation](docs/getting_started.md).
+Have a look at the [documentation](docs/index.md).
 
