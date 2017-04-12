@@ -55,6 +55,7 @@ class CreateBreakpointDB {
             t 'Number of threads to use (<= number of samples)', args:1, required:false
             r 'Number of retries if error occurs scanning region', args:1, required:false
             s 'Write run statistics to file', args:1, required: false
+            sampleids 'List of comma separated sample ids to associate to BAM files (default: used sample id from BAM file)', args:1, required:false
             adapter 'Set adapter sequence to <arg> for filtering out adapter contamination', args:1, required:false
             fresh 'Overwrite / recreate existing database instead of adding to it', required:false
             region 'Region to process (if not provided, all contigs in first BAM file)', args: Cli.UNLIMITED
@@ -86,7 +87,9 @@ class CreateBreakpointDB {
        
         int retries = opts.r ? opts.r.toInteger() : 0
         
-        List samples = bams.collect { it.samples[0] }
+        List samples = opts.sampleids ? opts.sampleids.tokenize(',') : bams.collect { it.samples[0] }
+        
+        log.info "Samples are: " + samples.join(",")
         
         Logger filterLog = createFilterLog(dbFile)
         
@@ -109,7 +112,7 @@ class CreateBreakpointDB {
         
         String adapterSeq = opts.adapter ?: null
         
-        List breakpointExtractors = scanBAMRegions(regions, concurrency, bams, dbWriter, filterLog, opts.v, retries, adapterSeq)
+        List breakpointExtractors = scanBAMRegions(regions, concurrency, bams, dbWriter, filterLog, opts.v, retries, adapterSeq, samples)
         
         dbWriter.send("end")
         
@@ -204,13 +207,18 @@ class CreateBreakpointDB {
      * @param dbWriter
      * @return  List of breakpoint extractors created
      */
-    private static List scanBAMRegions(List subRegions, int concurrency, List bams, WriteBreakpointDBActor dbWriter, Logger filterLog, boolean verbose, int retries, String adapterSeq) {
+    private static List scanBAMRegions(List subRegions, int concurrency, List bams, WriteBreakpointDBActor dbWriter, Logger filterLog, boolean verbose, int retries, String adapterSeq, List<String> samples) {
+        
         List breakpointExtractors = []
         int subRegionCount = 0
         for(Region subRegion in subRegions) {
             log.info("Processing subregion $subRegion (size=${subRegion.to - subRegion.from})")
-            List bpes = bams.collect { bam ->
-                BreakpointExtractor bpExtractor = new BreakpointExtractor(bam) 
+            List bpes = [bams,samples].transpose().collect { bamSampleIdPair ->
+                
+                SAM bam = bamSampleIdPair[0]
+                String sampleId = bamSampleIdPair[1]
+                
+                BreakpointExtractor bpExtractor = new BreakpointExtractor(bam, sampleId) 
                 bpExtractor.breakpointListener = dbWriter
                 bpExtractor.filter.filterLog = filterLog
                 if(verbose)

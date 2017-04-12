@@ -200,8 +200,18 @@ class BreakpointExtractor {
      */
     TreeMap<Integer, List<SAMRecord>> aheadCache = new TreeMap()
     
+    String sampleId = null
+    
     BreakpointExtractor(SAM bam) {
+        this(bam,bam.samples[0])
+    }
+    
+    BreakpointExtractor(SAM bam, String sampleId) {
+        if(bam.samples.unique().size()>1)
+            throw new IllegalArgumentException("This tool only supports single-sample bam files")
+        
         this.bam = bam
+        this.sampleId = sampleId
     }
     
     /**
@@ -242,11 +252,6 @@ class BreakpointExtractor {
             softClipNoiseThreshold: softClipNoiseThreshold,
             maxBreakpointsInWindow: maxBreakpointsInWindow
         )
-        
-        if(bam.samples.unique().size()>1)
-            throw new IllegalArgumentException("This tool only supports single-sample bam files")
-        
-        String sampleId = bam.samples[0]
         
         int halfWindowSize = (int)(READ_WINDOW_SIZE / (int)2)
         
