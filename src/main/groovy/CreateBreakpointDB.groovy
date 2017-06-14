@@ -62,7 +62,6 @@ class CreateBreakpointDB {
             mask 'Mask containing regions to exclude (skip over these regions)', args:1, required: false
             ref 'Reference sequence (optional) to annotate reference sequence at each breakpoint', args:1, required: false
             v 'Verbose logging of filtering decisions (appears in file <db>.log)', required:false
-            resume 'Resume a previous run by finding highest added breakpoint and processing from there', args:1
             'L' 'Mask of regions to include (scan these interesected with that specified by -region)', args:1, required: false
         }
         
@@ -84,7 +83,7 @@ class CreateBreakpointDB {
                 throw new RuntimeException("Unable to delete existing database $dbFile.absolutePath")
         }
         
-        List<Region> regions = resolveRegions(opts, bams, opts.resume)
+        List<Region> regions = resolveRegions(opts, bams)
        
         int retries = opts.r ? opts.r.toInteger() : 0
         
@@ -275,7 +274,7 @@ class CreateBreakpointDB {
         
     }
     
-    static List<Region> resolveRegions(OptionAccessor opts, List<SAM> bams, resume) {
+    static List<Region> resolveRegions(OptionAccessor opts, List<SAM> bams) {
         
         List regionValues = []
         if(opts.regions) 
@@ -287,7 +286,7 @@ class CreateBreakpointDB {
         }
         
         List<Region> subRegions = regionValues.collect { String regionValue ->
-            Region region = resolveRegion(regionValue, bams, opts.db, resume)
+            Region region = resolveRegion(regionValue, bams, opts.db)
             
             log.info "Adding scanned region $region"
             
@@ -306,7 +305,7 @@ class CreateBreakpointDB {
     }
     
 
-    private static Region resolveRegion(String regionValue, List bams, String databaseFile, boolean resume) {
+    private static Region resolveRegion(String regionValue, List bams, String databaseFile) {
         // If region is just a chromosome then look for the chromosome length in the first bam file
         if(!regionValue.contains(":")) {
             regionValue = regionValue + ":0-" + bams[0].contigs[regionValue]
@@ -315,7 +314,7 @@ class CreateBreakpointDB {
         Region region = new Region(regionValue)
         
         // If database exists, determine the maximum breakpoint and resume from there
-        if(resume && new File(databaseFile).exists()) {
+        if(new File(databaseFile).exists()) {
             log.info "Database file $databaseFile already exists: scanning will start from highest breakpoint"
             Sql db = Sql.newInstance("jdbc:sqlite:$databaseFile")
        
