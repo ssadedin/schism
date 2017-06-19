@@ -272,7 +272,8 @@ class BreakpointExtractor {
         List<SAMRecord> emptyList = Collections.emptyList()
         
         String regionChr = region.chr
-        if(!(bam.sniffGenomeBuild() in ["hg18","hg19","hg38"]))
+        String genomeBuild = bam.sniffGenomeBuild()
+        if(genomeBuild?.startsWith('GRCh'))
             regionChr = regionChr.replaceAll('^chr','')
             
         bam.movingWindow(READ_WINDOW_SIZE, regionChr, region.from,region.to, { ReadWindow readWindow ->
