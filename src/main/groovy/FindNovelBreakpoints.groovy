@@ -19,8 +19,10 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import java.nio.file.Files
 import java.text.NumberFormat;
 
+import groovy.json.JsonOutput
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log;
@@ -30,7 +32,7 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;;
 
 /**
- * Search for breakpoints in a BAM file, filtered against the given database of know
+ * Search for breakpoints in a BAM file, filtered against the given database of known
  * breakpoints to a given frequency (count).
  * 
  * @author ssadedin@broadinstitute.org
@@ -295,21 +297,67 @@ class FindNovelBreakpoints extends DefaultActor {
             "genes",
             "cdsdist"
         ]
+        
+        
+    static List<String> HTML_ASSETS = [
+        'DOMBuilder.dom.min.js',
+        'd3.js',
+        'date_fns.js',
+        'errors.css',
+        'goldenlayout-base.css',
+        'goldenlayout-light-theme.css',
+        'goldenlayout.js',
+        'grails.css',
+        'jquery-2.2.0.min.js',
+        'jquery.dataTables.min.css',
+        'jquery.dataTables.min.js',
+        'main.css',
+        'models.js',
+        'nv.d3.css',
+        'nv.d3.js',
+        'report.html',
+        'schism.css',
+        'schism.js',
+        'views.js',
+        'vue.js',
+        'vuetiful.css',
+        'vuetiful.js'
+    ]
     
     void outputBreakpoints() {
         
         NumberFormat fmt = NumberFormat.getIntegerInstance()
         fmt.maximumFractionDigits = 3
         
+        Writer jsonWriter = null
+        File htmlFile = null
+        if(options.html) {
+            
+            File htmlDir = new File(options.html).absoluteFile
+            htmlDir.mkdirs()
+            
+            for(String asset in HTML_ASSETS) {
+                File outFile = new File(htmlDir, asset)
+                log.info "Copy: $asset => $outFile"
+                getClass().classLoader.getResourceAsStream(asset).withStream { ins ->
+                    outFile.withOutputStream { outs -> 
+                        Files.copy(ins, outs)
+                    }
+                }
+            }
+            
+            htmlFile = new File(htmlDir, 'index.html').absoluteFile
+            jsonWriter = new File(htmlDir, 'breakpoints.js').newWriter()
+            jsonWriter.println('js_load_data = [')
+        }
+                
         output.println(headers.join('\t'))
+        
+        boolean first = true
         
         for(BreakpointInfo bp in breakpoints) {
             
             boolean verbose = false
-//            if(bp.pos == 19914056 || bp.pos == 19914394) {
-//                println "Debug breakpoint: $bp with bases: " + bp.observations[0].bases
-//                verbose = true
-//            }
 
             // Note that in this case we are searching only a single sample,
             // so each breakpoint will have exactly 1 observation
@@ -329,6 +377,25 @@ class FindNovelBreakpoints extends DefaultActor {
             }
             
             output.println(breakpointLine.join('\t'))
+            
+            if(jsonWriter) {
+                
+                if(!first)
+                    jsonWriter.println(',')
+                
+                if(refGene) {
+                    breakpointLine[-2] = bp.genes
+                    breakpointLine[-1] = bp.exonDistances
+                }
+                jsonWriter.print(
+                    JsonOutput.toJson(
+                        [headers, breakpointLine].transpose().collectEntries()
+                    ) 
+                )
+                
+            }
+            
+            first = false
         }
         
         if(options.bed) {
@@ -337,6 +404,11 @@ class FindNovelBreakpoints extends DefaultActor {
                     w.println([bp.chr, bp.pos - 100, bp.pos + 100, bp.observations[0].sample].join('\t'))
                 }
             }
+        }
+        
+        if(jsonWriter) {
+            jsonWriter.println('\n]')
+            jsonWriter.close()
         }
         
     }
@@ -465,6 +537,7 @@ class FindNovelBreakpoints extends DefaultActor {
             mask 'BED file containing regions to intersect scan regions with', args:1, required:false
             bed 'Write out a BED file containing regions of breakpoints found (100bp padding)', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
+            html 'Create HTML report in given directory', args:1, required: false
         }
         
         Banner.banner()
