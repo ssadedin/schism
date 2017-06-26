@@ -274,7 +274,7 @@ Vue.component('BreakpointsView', {
       return {
           breakpoints: model.breakpoints,
           highlightedRow: null,
-          obs_filter_levels: [1,2,3,4,5,10,20,30,50],
+          obs_filter_levels: [1,2,3,4,5,6,7,8,9,10,15,20,30,50],
           sample_count_filter_levels: [1,2,3,4,5,6,7,8,9,10,15,20,30,50],
           obs_filter_threshold: 3,
           sample_count_filter_threshold: 10,
