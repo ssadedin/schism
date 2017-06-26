@@ -394,6 +394,10 @@ class FindNovelBreakpoints extends DefaultActor {
                     breakpointLine[-2] = bp.genes
                     breakpointLine[-1] = bp.exonDistances
                 }
+                else {
+                   breakpointLine.add('') 
+                   breakpointLine.add('') 
+                }
                 
                 // The samples 
                 List<String> samples = collectFromDbs(bp.chr, bp.pos) { Sql db ->
