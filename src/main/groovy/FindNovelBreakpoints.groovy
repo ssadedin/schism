@@ -579,7 +579,7 @@ class FindNovelBreakpoints extends DefaultActor {
             
             log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
 	        RefGenes refGene
-            if(genomeBuild.startsWith('hg') || genomeBuild.startsWith('GRCh'))
+            if(genomeBuild?.startsWith('hg') || genomeBuild.startsWith('GRCh'))
                 refGene = RefGenes.download(genomeBuild)
                 
 	        Regions regions = resolveRegions(refGene, bam, opts)
