@@ -55,6 +55,7 @@ class FindNovelBreakpoints extends DefaultActor {
     int tooCommon = 0
     int partnered = 0
     int mapQ = 0
+    String chrPrefix = null
     
     Regions databases = new Regions()
     
@@ -133,7 +134,8 @@ class FindNovelBreakpoints extends DefaultActor {
     }
     
     Regions determineDatabaseRanges(List<Sql> databases) {
-        String chrPrefix = bam.contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
+        
+        this.chrPrefix = bam.contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
         
         Regions dbRegions = new Regions()
         def contigs = bam.getContigs()
@@ -147,7 +149,7 @@ class FindNovelBreakpoints extends DefaultActor {
             if(minRegion.chr == maxRegion.chr)
                 dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from,maxRegion.to, db))
             else
-                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from,contigs[minRegion.chr], db))
+                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from, contigs[minRegion.chr], db))
             
             for(i in XPos.chrToInt(minRegion.chr)..<XPos.chrToInt(maxRegion.chr)) {
                 def chr = chrPrefix + XPos.intToChr(i)
@@ -160,6 +162,9 @@ class FindNovelBreakpoints extends DefaultActor {
     }
     
     Region dbRegion(String chr, int from, int to, Sql db) {
+        if(chrPrefix && !chr.startsWith(chrPrefix))
+            chr = chrPrefix + chr
+            
         Region r = new Region(chr, from..to)
         r.db = db
         r
