@@ -543,6 +543,7 @@ class FindNovelBreakpoints extends DefaultActor {
             bed 'Write out a BED file containing regions of breakpoints found (100bp padding)', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
+            genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
         }
         
         Banner.banner()
@@ -574,7 +575,13 @@ class FindNovelBreakpoints extends DefaultActor {
 	                fnb.reference = new FASTA(opts.ref)
 	        }
 	        
-	        RefGenes refGene = RefGenes.download(bam.sniffGenomeBuild())
+            String genomeBuild = opts.genome ? opts.genome : bam.sniffGenomeBuild()
+            
+            log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
+	        RefGenes refGene
+            if(genomeBuild.startsWith('hg') || genomeBuild.startsWith('GRCh'))
+                refGene = RefGenes.download(genomeBuild)
+                
 	        Regions regions = resolveRegions(refGene, bam, opts)
 	        fnb.refGene = refGene
 	        
