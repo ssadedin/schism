@@ -68,6 +68,9 @@ var TABLE_COLUMNS = [
    { title: 'Sample Obs', data: 'depth', className: 'depth' },
    { title: 'Genes', data: 'genes', render: function(data,type,row) {
            window.row = row;
+           if(!row.genes)
+               return '';
+           
            return row.genes.map(function(g,i) {
                let url = 'http://www.genecards.org/cgi-bin/carddisp.pl?gene='+encodeURIComponent(g)+'&search='+g+'#diseases'
                let cds_dist = row.cdsdist[i];
