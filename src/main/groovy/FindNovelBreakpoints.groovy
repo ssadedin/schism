@@ -149,12 +149,12 @@ class FindNovelBreakpoints extends DefaultActor {
             if(minRegion.chr == maxRegion.chr)
                 dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from,maxRegion.to, db))
             else
-                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from, contigs[minRegion.chr], db))
+                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from, contigs[chrPrefix+minRegion.chr], db))
             
             for(i in XPos.chrToInt(minRegion.chr)..<XPos.chrToInt(maxRegion.chr)) {
                 def chr = chrPrefix + XPos.intToChr(i)
-                if(contigs[chr])
-                    dbRegions.addRegion(dbRegion(chr, 0, contigs[chr], db))
+                if(contigs[chrPrefix + chr])
+                    dbRegions.addRegion(dbRegion(chr, 0, contigs[chrPrefix + chr], db))
             }
             dbRegions.addRegion(dbRegion(maxRegion.chr, 0,maxRegion.to, db))
         }
