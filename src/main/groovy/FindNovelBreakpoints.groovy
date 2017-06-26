@@ -358,6 +358,8 @@ class FindNovelBreakpoints extends DefaultActor {
                 
         output.println(headers.join('\t'))
         
+        List<String> jsonHeaders = headers + ["samples"]
+        
         boolean first = true
         
         for(BreakpointInfo bp in breakpoints) {
@@ -392,9 +394,15 @@ class FindNovelBreakpoints extends DefaultActor {
                     breakpointLine[-2] = bp.genes
                     breakpointLine[-1] = bp.exonDistances
                 }
+                
+                // The samples 
+                List<String> samples = collectFromDbs(bp.chr, bp.pos) { Sql db ->
+                    db.rows("""select sample from breakpoint_observation where bp_id = $bp.id""")*.sample
+                }.sum()
+                
                 jsonWriter.print(
                     JsonOutput.toJson(
-                        [headers, breakpointLine].transpose().collectEntries()
+                        [jsonHeaders, breakpointLine + [samples]].transpose().collectEntries()
                     ) 
                 )
                 
@@ -419,6 +427,23 @@ class FindNovelBreakpoints extends DefaultActor {
     }
     
     boolean warnedAboutNoOverlap = false
+    
+    @CompileStatic
+    Object collectFromDbs(String chr, int pos, Closure c) {
+        List<Sql> dbs = (List<Sql>)databases.getOverlaps(chr, pos, pos+1).collect { r ->
+            GRange gr = (GRange)r
+            Expando e = (Expando)gr.extra
+            e.getProperty('db')
+        }.unique {System.identityHashCode(it)}
+        
+        if(!dbs && !warnedAboutNoOverlap) {
+            log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
+            warnedAboutNoOverlap = true
+        }
+            
+        return dbs.collect(c)
+    }
+    
     
     @CompileStatic
     int getBreakpointFrequency(String chr, int pos) {

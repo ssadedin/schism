@@ -86,7 +86,7 @@ span.largeEvent, span.largeEvent a { color: red; font-weight: bold; }
  overflow: scroll;
 }
 
-div.panel_content_wrapper {
+div.content_panel_wrapper {
  padding: 1em 2em 1em 1em;
 }
 
@@ -96,5 +96,11 @@ div.spacer {
 
 .lm_header .lm_tab .lm_title {
     padding-top: 1px;
+}
+
+#form-container {
+ text-align: right;
+ font-size: 12px;
+ margin: 8px 0px 8px 5px;
 }
     

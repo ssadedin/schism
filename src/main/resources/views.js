@@ -66,6 +66,10 @@ var TABLE_COLUMNS = [
    { title: 'Individual', data: 'sample', className: 'sample' },
    { title: 'Samples', data: 'sample_count', className: 'sample_count' },
    { title: 'Sample Obs', data: 'depth', className: 'depth' },
+   { title: 'Samples', data: 'samples', className: 'samples', render: function(data,type,row) {
+           return row.samples.join(',')
+       }
+   },
    { title: 'Genes', data: 'genes', render: function(data,type,row) {
            window.row = row;
            if(!row.genes)
@@ -146,7 +150,7 @@ Vue.component('BreakpointsView', {
       var breakpoints = model.breakpoints;
       $(breakpoints).on('breakpoints:change', () => { 
         console.log("Updated breakpoints: " + model.breakpoints.breakpoints.length);
-        this.breakpoints = model.breakpoints.breakpoints;
+        this.filterSamples(this)
       })
   },
   
@@ -157,10 +161,13 @@ Vue.component('BreakpointsView', {
             window.bps = this.breakpoints;
             var me = this;
             var breakpointCount = this.breakpoints.length;
-            var breakpointTable = null;
             if(breakpointCount > 0) {
                 console.log('Displaying ' + breakpointCount + ' breakpoints')
-                breakpointTable = $('#breakpoint-table').DataTable( {
+                
+                if(this.breakpointTable)
+                    this.breakpointTable.destroy()
+                
+                this.breakpointTable = $('#breakpoint-table').DataTable( {
                     data: this.breakpoints,
 //                    createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
                     columns: TABLE_COLUMNS,
@@ -168,6 +175,9 @@ Vue.component('BreakpointsView', {
                 } );
                 
                 $('#breakpoint-table').css('width','100%')
+            }
+            else {
+                $('#breakpoint-table tbody').html('<tr><td>No breakpoints</td></tr>')
             }
 //            else {
 //                $('#breakpoints-table').html('Data is still loading ...');
@@ -233,35 +243,73 @@ Vue.component('BreakpointsView', {
         this.highlightedRow = tr;
     },
     
-    events: { // todo
-        'change #sample_obs' : function() { 
-            var obs = parseInt($('#sample_obs').val(),10);
-            console.log('Changing min sample obs to ' + obs); 
-            breakpoints.set('minSampleObs',obs)
+    methods: { // todo
+        
+        filterSamples: (self) => {
+            let excluded_samples = self.exclude_sample.split(',').map(x => x.trim())
+            self.breakpoints = model.breakpoints.breakpoints.filter((bp) => { 
+                return ((bp.depth > self.obs_filter_threshold) && (bp.sample_count <= self.sample_count_filter_threshold)) &&
+                       excluded_samples.every( s => bp.samples.indexOf(s)<0)
+            })
+            console.log("There are now "+ self.breakpoints.length + " filtered breakpoints")
         },
-        'change #max_sample_count' : function() { 
-            var maxSampleCount = parseInt($('#max_sample_count').val(),10);
-            console.log('Changing max sample count to ' + maxSampleCount); 
-            breakpoints.set('maxSampleCount',maxSampleCount)
-        } 
+        
+        updateObsFilter : function() {
+            console.log('Changing min sample obs to ' + this.obs_filter_threshold); 
+            this.filterSamples(this)
+        },
+        updateSampleCountFilter : function() { 
+            console.log('Changing max sample count to ' + this.sample_count_filter_threshold); 
+            this.filterSamples(this)
+            console.log("There are now "+ this.breakpoints.length + " breakpoints")
+        },
+        updateExcludedSamples : function() { 
+            console.log('Changing excluded samples to ' + this.exclude_sample); 
+            this.filterSamples(this)
+        }  
     },
   
   
   data: function() {
       return {
           breakpoints: model.breakpoints,
-          highlightedRow: null
+          highlightedRow: null,
+          obs_filter_levels: [1,2,3,4,5,10,20,30,50],
+          sample_count_filter_levels: [1,2,3,4,5,6,7,8,9,10,15,20,30,50],
+          obs_filter_threshold: 3,
+          sample_count_filter_threshold: 10,
+          breakpointTable: null,
+          exclude_sample: ''
       }
   },
   
   template: `
-      <div>
+      <div class='content_panel_wrapper'>
         <div class="container">
-            <div id="form-container"></div>
+            <div id="form-container">
+            
+                <label for=exclude_sample>Exclude</label>
+                <input v-model="exclude_sample" placeholder="Exclude samples" v-on:change="updateExcludedSamples">
+            
+                <label for=obs_filter_threshold>Min Reads Supporting Breakpoint</label>
+                <select v-model="obs_filter_threshold" v-on:change="updateObsFilter">
+                    <option v-for="option in obs_filter_levels" v-bind:value="option">
+                    {{ option }}
+                    </option>
+                </select>
+                
+                <label for=obs_filter_threshold>Max Samples with Breakpoint</label>
+                <select v-model="sample_count_filter_threshold" v-on:change="updateSampleCountFilter">
+                    <option v-for="option in sample_count_filter_levels" v-bind:value="option">
+                    {{ option }}
+                    </option>
+                </select> 
+            </div>
         </div>
         
         <div class="container">
-            <div id="search-controls-container"></div>
+            <div id="search-controls-container">
+            </div>
         </div>
         
         <div class="container">
