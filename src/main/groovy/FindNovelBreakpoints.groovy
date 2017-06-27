@@ -484,11 +484,14 @@ class FindNovelBreakpoints extends DefaultActor {
             e.getProperty('db')
         }.unique {System.identityHashCode(it)}
         
-        if(!dbs && !warnedAboutNoOverlap) {
-            log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
-            warnedAboutNoOverlap = true
+        if(!dbs) {
+            if(!warnedAboutNoOverlap) {
+                log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
+                warnedAboutNoOverlap = true
+            }
             return 0
         }
+        
             
         return (int)dbs.collect { db ->
             getDbBreakpointFrequency(db, chr,pos)
