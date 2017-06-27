@@ -341,6 +341,9 @@ class FindNovelBreakpoints extends DefaultActor {
         NumberFormat fmt = NumberFormat.getIntegerInstance()
         fmt.maximumFractionDigits = 3
         
+        NumberFormat percFormat = NumberFormat.getPercentInstance()
+        percFormat.maximumFractionDigits = 1
+        
         Writer jsonWriter = null
         File htmlFile = null
         if(options.html) {
@@ -368,10 +371,16 @@ class FindNovelBreakpoints extends DefaultActor {
         List<String> jsonHeaders = headers + ["samples"]
         
         boolean first = true
+        int count = 0
+        
+        ProgressCounter progress = new ProgressCounter(withTime:true, withRate:true, extra: {
+            percFormat.format((double)(count+1)/(breakpoints.size()+1)) + " complete" 
+        })
         
         for(BreakpointInfo bp in breakpoints) {
             
             boolean verbose = false
+            
 
             // Note that in this case we are searching only a single sample,
             // so each breakpoint will have exactly 1 observation
@@ -394,7 +403,7 @@ class FindNovelBreakpoints extends DefaultActor {
             
             if(jsonWriter) {
                 
-                if(!first)
+                if(count)
                     jsonWriter.println(',')
                 
                 if(refGene) {
@@ -426,8 +435,9 @@ class FindNovelBreakpoints extends DefaultActor {
                 )
                 
             }
+            progress.count()
             
-            first = false
+            ++count
         }
         
         if(options.bed) {
@@ -442,6 +452,8 @@ class FindNovelBreakpoints extends DefaultActor {
             jsonWriter.println('\n]')
             jsonWriter.close()
         }
+        
+        progress.end()
         
     }
     
