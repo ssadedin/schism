@@ -55,6 +55,13 @@ class FindNovelBreakpoints extends DefaultActor {
     int tooCommon = 0
     int partnered = 0
     int mapQ = 0
+    
+    /**
+     * Maximum number of samples for which individual samples will be annotated
+     * in JSON output when a soft clip is observed in the database
+     */
+    final static int SAMPLE_ANNOTATION_LIMIT = 5
+    
     String chrPrefix = null
     
     Regions databases = new Regions()
@@ -399,10 +406,18 @@ class FindNovelBreakpoints extends DefaultActor {
                    breakpointLine.add('') 
                 }
                 
-                // The samples 
-                List<String> samples = collectFromDbs(bp.chr, bp.pos) { Sql db ->
-                    db.rows("""select sample from breakpoint_observation where bp_id = $bp.id""")*.sample
-                }.sum()
+                // if less than SAMPLE_ANNOTATION_LIMIT samples, then find the samples
+                // and annotate them
+                // TODO: do this in background while search is running so we don't slow down this process?
+                List<String> samples
+                if(bp.sampleCount < SAMPLE_ANNOTATION_LIMIT) {
+                    samples = collectFromDbs(bp.chr, bp.pos) { Sql db ->
+                        db.rows("""select sample from breakpoint_observation where bp_id = $bp.id limit $SAMPLE_ANNOTATION_LIMIT""")*.sample
+                    }.sum()
+                }
+                else {
+                    samples = []
+                }
                 
                 jsonWriter.print(
                     JsonOutput.toJson(
