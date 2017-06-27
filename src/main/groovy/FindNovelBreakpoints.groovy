@@ -424,9 +424,9 @@ class FindNovelBreakpoints extends DefaultActor {
                         db.rows("""select sample from breakpoint_observation where bp_id = $bp.id limit $SAMPLE_ANNOTATION_LIMIT""")*.sample
                     }.sum()
                 }
-                else {
+                
+                if(sample == null)
                     samples = []
-                }
                 
                 jsonWriter.print(
                     JsonOutput.toJson(
