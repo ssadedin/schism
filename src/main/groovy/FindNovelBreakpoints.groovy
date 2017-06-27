@@ -487,6 +487,7 @@ class FindNovelBreakpoints extends DefaultActor {
         if(!dbs && !warnedAboutNoOverlap) {
             log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
             warnedAboutNoOverlap = true
+            return 0
         }
             
         return (int)dbs.collect { db ->
