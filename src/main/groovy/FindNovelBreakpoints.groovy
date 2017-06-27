@@ -425,7 +425,7 @@ class FindNovelBreakpoints extends DefaultActor {
                     }.sum()
                 }
                 
-                if(sample == null)
+                if(samples == null)
                     samples = []
                 
                 jsonWriter.print(
