@@ -153,16 +153,22 @@ class FindNovelBreakpoints extends DefaultActor {
             
             log.info "Database $db spans $minRegion - $maxRegion"
             
+            // Add first region
             if(minRegion.chr == maxRegion.chr)
                 dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from,maxRegion.to, db))
             else
                 dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from, contigs[chrPrefix+minRegion.chr], db))
             
-            for(i in XPos.chrToInt(minRegion.chr)..<XPos.chrToInt(maxRegion.chr)) {
+            // Add middle chromosomes - these span the whole chromosome each
+            int minChrInt = XPos.chrToInt(minRegion.chr)
+            int maxChrInt = XPos.chrToInt(maxRegion.chr)
+            for(i in minChrInt..<maxChrInt) {
                 def chr = chrPrefix + XPos.intToChr(i)
-                if(contigs[chrPrefix + chr])
-                    dbRegions.addRegion(dbRegion(chr, 0, contigs[chrPrefix + chr], db))
+                if(contigs[chr])
+                    dbRegions.addRegion(dbRegion(chr, 0, contigs[chr], db))
             }
+            
+            // Add last chromosome (only up to end of last region)
             dbRegions.addRegion(dbRegion(maxRegion.chr, 0,maxRegion.to, db))
         }
         return dbRegions
