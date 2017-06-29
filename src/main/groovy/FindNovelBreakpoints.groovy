@@ -125,8 +125,8 @@ class FindNovelBreakpoints extends DefaultActor {
         
         log.info "Checking bam file $bamFile"
         bam = new SAM(bamFile)
-        if(bam.samples.unique().size() > 1)
-            throw new IllegalArgumentException("This tool supports only single sample BAM files. The given BAM file has samples " + bam.samples.join(","))
+        if((bam.samples.unique().size() > 1) && !options.multi)
+            throw new IllegalArgumentException("This tool supports only single sample BAM files. The given BAM file has samples " + bam.samples.join(",") + ". Use -multi flag to treat all these as the same sample.")
             
         log.info "Determining database ranges ..."
         this.databases = determineDatabaseRanges(dbs)
@@ -607,6 +607,7 @@ class FindNovelBreakpoints extends DefaultActor {
             genelist 'Scan the given file of genes (HGNC symbols)', args:1, required:false
             mask 'BED file containing regions to intersect scan regions with', args:1, required:false
             bed 'Write out a BED file containing regions of breakpoints found (100bp padding)', args:1, required:false
+            multi 'Allow multi sample BAM file (treat as single)', required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
