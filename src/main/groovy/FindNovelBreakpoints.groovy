@@ -597,7 +597,7 @@ class FindNovelBreakpoints extends DefaultActor {
             db 'Breakpoint database(s)', args:Cli.UNLIMITED, required:false
             dbdir 'Breakpoint database directory - all files ending with .db are treated as databases', required: false, args:1
             mindp 'Minimum depth of breakpoints to report (3)', args:1, required: false
-            maxsc 'Maximum sample count of breakpoints to report', args: 1, required: false
+            maxsc 'Maximum sample count of breakpoints to report (default=10)', args: 1, required: false
             region 'Region of genome to analyse', args:Cli.UNLIMITED, required:false
             ref "Reference sequence (optional) to annotate reference sequence at each breakpoint (use 'auto' to try and find it automatically via various means)", args:1, required: false
             xs 'Exclude given samples from sample counts', args:Cli.UNLIMITED, required:false
