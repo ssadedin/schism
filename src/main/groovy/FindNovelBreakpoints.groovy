@@ -736,11 +736,13 @@ class FindNovelBreakpoints extends DefaultActor {
                 regions = new Regions()
             for(gene in genes) {
                 Region geneRegion = refGene.getGeneRegion(gene)
-                if(geneRegion == null)
+                if(geneRegion == null) {
                     log.warning "Gene $gene not found in RefSeq database"
-                    // throw new IllegalArgumentException("Gene $gene not found in RefSeq database")
-                log.info "Gene $gene translated to $geneRegion"
-                regions.addRegion(geneRegion)
+                }
+                else {
+                    log.info "Gene $gene translated to $geneRegion"
+                    regions.addRegion(geneRegion)
+                }
             }
         } 
         return regions
