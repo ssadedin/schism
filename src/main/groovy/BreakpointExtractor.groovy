@@ -202,12 +202,12 @@ class BreakpointExtractor {
     
     String sampleId = null
     
-    BreakpointExtractor(SAM bam) {
-        this(bam,bam.samples[0])
+    BreakpointExtractor(Map options=[:],SAM bam) {
+        this(options,bam,bam.samples[0])
     }
     
-    BreakpointExtractor(SAM bam, String sampleId) {
-        if(bam.samples.unique().size()>1)
+    BreakpointExtractor(Map options=[:],SAM bam, String sampleId) {
+        if((bam.samples.unique().size()>1) && !options.allowMultiSample)
             throw new IllegalArgumentException("This tool only supports single-sample bam files")
         
         this.bam = bam

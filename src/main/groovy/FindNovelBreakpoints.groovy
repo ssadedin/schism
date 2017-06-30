@@ -559,7 +559,7 @@ class FindNovelBreakpoints extends DefaultActor {
         }
         
         for(region in includedRegions) {
-            def bpe = new BreakpointExtractor(bam)
+            def bpe = new BreakpointExtractor(bam, allowMultiSample: options.multi)
             bpe.breakpointListener = this
             if(options.adapter) 
                 bpe.filter.setAdapterSequence(options.adapter)
