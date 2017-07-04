@@ -19,13 +19,16 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import java.awt.AttributeValue
 import java.nio.file.Files
 import java.text.NumberFormat;
+import java.util.stream.Stream
 
 import groovy.json.JsonOutput
 import groovy.sql.Sql
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log;
+import groovyx.gpars.GParsPool
 import groovyx.gpars.actor.DefaultActor
 import htsjdk.samtools.CigarElement
 import htsjdk.samtools.CigarOperator;
@@ -57,16 +60,6 @@ class FindNovelBreakpoints extends DefaultActor {
     int mapQ = 0
     
     /**
-     * Maximum number of samples for which individual samples will be annotated
-     * in JSON output when a soft clip is observed in the database
-     */
-    final static int SAMPLE_ANNOTATION_LIMIT = 5
-    
-    String chrPrefix = null
-    
-    Regions databases = new Regions()
-    
-    /**
      * Optional refgene instance to annotate genes for breakpoints
      */
     RefGenes refGene = null
@@ -83,15 +76,9 @@ class FindNovelBreakpoints extends DefaultActor {
     String sample = null
     
     List<String> excludeSamples
+    
+    BreakpointDatabaseSet databaseSet = null
 	
-	List<Sql> databaseConnections
-    
-	/**
-	 * The output to write to - an object supporting println
-	 * (PrintStream, Writer, etc)
-	 */
-    def output
-    
     /**
      * Create a breakpoint finder based on the given options
      * 
@@ -105,82 +92,20 @@ class FindNovelBreakpoints extends DefaultActor {
         if(options.maxsc)
             this.maxSampleCount = options.maxsc.toInteger()
             
-        if(options.o) {
-            File outputFile = new File(options.o)
-            log.info "Output file is " + outputFile.absolutePath
-            this.output = new PrintStream(outputFile.newOutputStream())
-        }
-        else
-            this.output = System.out
-            
-        log.info "Opening databases ..."
-        List<Sql> dbs = dbFiles.collect {  dbFile ->
-            Sql db = Sql.newInstance("jdbc:sqlite:${dbFile}")
-            db.cacheConnection = true
-            db.cacheStatements = true
-            db
-        }
-		
-		this.databaseConnections = dbs
-        
         log.info "Checking bam file $bamFile"
         bam = new SAM(bamFile)
         if((bam.samples.unique().size() > 1) && !options.multi)
             throw new IllegalArgumentException("This tool supports only single sample BAM files. The given BAM file has samples " + bam.samples.join(",") + ". Use -multi flag to treat all these as the same sample.")
             
-        log.info "Determining database ranges ..."
-        this.databases = determineDatabaseRanges(dbs)
-        
         log.info "Found sample ${bam.samples[0]} in bam file" 
         this.sample = bam.samples[0]
         
+        databaseSet = new BreakpointDatabaseSet(dbFiles, bam)
+        
         if(options.xss) {
-            this.excludeSamples = options.xss as List
-            this.excludeSamples.add(this.sample)
+            databaseSet.excludeSamples = options.xss as List
+            databaseSet.excludeSamples.add(this.sample)
         }
-    }
-    
-    Regions determineDatabaseRanges(List<Sql> databases) {
-        
-        this.chrPrefix = bam.contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
-        
-        Regions dbRegions = new Regions()
-        def contigs = bam.getContigs()
-        for(Sql db in databases) {
-            def minmax = db.firstRow("select min(id) as min_bp, max(id) as max_bp from breakpoint;")
-            Region minRegion = XPos.parsePos(minmax.min_bp)
-            Region maxRegion = XPos.parsePos(minmax.max_bp)
-            
-            log.info "Database $db spans $minRegion - $maxRegion"
-            
-            // Add first region
-            if(minRegion.chr == maxRegion.chr)
-                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from,maxRegion.to, db))
-            else
-                dbRegions.addRegion(dbRegion(minRegion.chr, minRegion.from, contigs[chrPrefix+minRegion.chr], db))
-            
-            // Add middle chromosomes - these span the whole chromosome each
-            int minChrInt = XPos.chrToInt(minRegion.chr)
-            int maxChrInt = XPos.chrToInt(maxRegion.chr)
-            for(i in minChrInt..<maxChrInt) {
-                def chr = chrPrefix + XPos.intToChr(i)
-                if(contigs[chr])
-                    dbRegions.addRegion(dbRegion(chr, 0, contigs[chr], db))
-            }
-            
-            // Add last chromosome (only up to end of last region)
-            dbRegions.addRegion(dbRegion(maxRegion.chr, 0,maxRegion.to, db))
-        }
-        return dbRegions
-    }
-    
-    Region dbRegion(String chr, int from, int to, Sql db) {
-        if(chrPrefix && !chr.startsWith(chrPrefix))
-            chr = chrPrefix + chr
-            
-        Region r = new Region(chr, from..to)
-        r.db = db
-        r
     }
     
     void act() {
@@ -254,7 +179,7 @@ class FindNovelBreakpoints extends DefaultActor {
         if(reads.size() < minDepth)
             return -1
 
-        int freq = getBreakpointFrequency(msg.chr, msg.pos)
+        int freq = databaseSet.getBreakpointFrequency(msg.chr, msg.pos)
         if(freq > maxSampleCount) {
             ++tooCommon
             return -1
@@ -303,234 +228,9 @@ class FindNovelBreakpoints extends DefaultActor {
         
     }
     
-    private static final List<String> headers = [
-            "chr",
-            "start",
-            "end",
-            "sample",
-            "depth",
-            "sample_count",
-            "cscore",
-            "partner",
-            "genes",
-            "cdsdist"
-        ]
-        
-        
-    static List<String> HTML_ASSETS = [
-        'DOMBuilder.dom.min.js',
-        'd3.js',
-        'date_fns.js',
-        'errors.css',
-        'goldenlayout-base.css',
-        'goldenlayout-light-theme.css',
-        'goldenlayout.js',
-        'grails.css',
-        'jquery-2.2.0.min.js',
-        'jquery.dataTables.min.css',
-        'jquery.dataTables.min.js',
-        'main.css',
-        'models.js',
-        'nv.d3.css',
-        'nv.d3.js',
-        'report.html',
-        'schism.css',
-        'schism.js',
-        'views.js',
-        'vue.js',
-        'vuetiful.css',
-        'vuetiful.js'
-    ]
-    
-    void outputBreakpoints() {
-        
-        NumberFormat fmt = NumberFormat.getIntegerInstance()
-        fmt.maximumFractionDigits = 3
-        
-        NumberFormat percFormat = NumberFormat.getPercentInstance()
-        percFormat.maximumFractionDigits = 1
-        
-        Writer jsonWriter = null
-        File htmlFile = null
-        if(options.html) {
-            
-            File htmlDir = new File(options.html).absoluteFile
-            htmlDir.mkdirs()
-            
-            for(String asset in HTML_ASSETS) {
-                File outFile = new File(htmlDir, asset)
-                log.info "Copy: $asset => $outFile"
-                getClass().classLoader.getResourceAsStream(asset).withStream { ins ->
-                    outFile.withOutputStream { outs -> 
-                        Files.copy(ins, outs)
-                    }
-                }
-            }
-            
-            htmlFile = new File(htmlDir, 'index.html').absoluteFile
-            jsonWriter = new File(htmlDir, 'breakpoints.js').newWriter()
-            jsonWriter.println('js_load_data = [')
-        }
-                
-        output.println(headers.join('\t'))
-        
-        List<String> jsonHeaders = headers + ["samples"]
-        
-        boolean first = true
-        int count = 0
-        
-        ProgressCounter progress = new ProgressCounter(withTime:true, withRate:true, extra: {
-            percFormat.format((double)(count+1)/(breakpoints.size()+1)) + " complete" 
-        })
-        
-        for(BreakpointInfo bp in breakpoints) {
-            
-            boolean verbose = false
-            
-
-            // Note that in this case we are searching only a single sample,
-            // so each breakpoint will have exactly 1 observation
-            BreakpointSampleInfo bpo = bp.observations[0]
-           
-            // if there is a consensus among the soft clip, check if there is a partner sequence
-            // inthe database
-            BreakpointInfo partner = bpo.partner
-            
-            // Check for overlapping genes
-            List breakpointLine = [bp.chr, bp.pos, bp.pos+1, bpo.sample, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
-            if(refGene) {
-                bp.annotateGenes(refGene, 5000)
-                String geneList = bp.genes.join(",")
-                breakpointLine.add(geneList)
-                breakpointLine.add(bp.exonDistances.join(","))
-            }
-            
-            output.println(breakpointLine.join('\t'))
-            
-            if(jsonWriter) {
-                
-                if(count)
-                    jsonWriter.println(',')
-                
-                if(refGene) {
-                    breakpointLine[-2] = bp.genes
-                    breakpointLine[-1] = bp.exonDistances
-                }
-                else {
-                   breakpointLine.add('') 
-                   breakpointLine.add('') 
-                }
-                
-                // if less than SAMPLE_ANNOTATION_LIMIT samples, then find the samples
-                // and annotate them
-                // TODO: do this in background while search is running so we don't slow down this process?
-                List<String> samples
-                if(bp.sampleCount < SAMPLE_ANNOTATION_LIMIT) {
-                    samples = collectFromDbs(bp.chr, bp.pos) { Sql db ->
-                        db.rows("""select sample from breakpoint_observation where bp_id = $bp.id limit $SAMPLE_ANNOTATION_LIMIT""")*.sample
-                    }.sum()
-                }
-                
-                if(samples == null)
-                    samples = []
-                
-                jsonWriter.print(
-                    JsonOutput.toJson(
-                        [jsonHeaders, breakpointLine + [samples]].transpose().collectEntries()
-                    ) 
-                )
-                
-            }
-            progress.count()
-            
-            ++count
-        }
-        
-        if(options.bed) {
-            new File(options.bed).withWriter { w ->
-                for(BreakpointInfo bp in breakpoints) {
-                    w.println([bp.chr, bp.pos - 100, bp.pos + 100, bp.observations[0].sample].join('\t'))
-                }
-            }
-        }
-        
-        if(jsonWriter) {
-            jsonWriter.println('\n]')
-            jsonWriter.close()
-        }
-        
-        progress.end()
-        
-    }
-    
-    boolean warnedAboutNoOverlap = false
-    
-    @CompileStatic
-    Object collectFromDbs(String chr, int pos, Closure c) {
-        List<Sql> dbs = (List<Sql>)databases.getOverlaps(chr, pos, pos+1).collect { r ->
-            GRange gr = (GRange)r
-            Expando e = (Expando)gr.extra
-            e.getProperty('db')
-        }.unique {System.identityHashCode(it)}
-        
-        if(!dbs && !warnedAboutNoOverlap) {
-            log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
-            warnedAboutNoOverlap = true
-        }
-            
-        return dbs.collect(c)
-    }
-    
-    
-    @CompileStatic
-    int getBreakpointFrequency(String chr, int pos) {
-        List<Sql> dbs = (List<Sql>)databases.getOverlaps(chr, pos, pos+1).collect { r ->
-            GRange gr = (GRange)r
-            Expando e = (Expando)gr.extra
-            e.getProperty('db')
-        }.unique {System.identityHashCode(it)}
-        
-        if(!dbs) {
-            if(!warnedAboutNoOverlap) {
-                log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
-                warnedAboutNoOverlap = true
-            }
-            return 0
-        }
-        
-            
-        return (int)dbs.collect { db ->
-            getDbBreakpointFrequency(db, chr,pos)
-        }.sum()?:0
-    }
-    
-    @CompileStatic
-    int getDbBreakpointFrequency(Sql db, String chr, int pos) {
-        long breakpointId = XPos.computePos(chr, pos)
-        def dbBreakpoint = db.firstRow("select sample_count from breakpoint where id = $breakpointId")        
-        if(dbBreakpoint == null)
-            return 0
-        else {
-            def excludeResult
-            if(excludeSamples) {
-                db.firstRow("""
-                    select count(1) as exclude_count from breakpoint_observation 
-                    where id = $breakpointId 
-                    and sample in (""" + "${excludeSamples.join("','")})" + """
-                """)
-            }
-            else {
-                excludeResult = db.firstRow("""
-                   select count(1) as exclude_count from breakpoint_observation where id = $breakpointId and sample=$sample
-                """)        
-            }
-            
-            int excludeCount = excludeResult ? (int)excludeResult.exclude_count : 0
-            
-            return ((int)dbBreakpoint.sample_count) - excludeCount
-        }
-    }
-    
+    /**
+     * Run the analysis for the configured BAM file over the given regions.
+     */
     void run(Regions regionsToAnalyse=null) {
         
         log.info "Searching for breakpoints supported by at least ${minDepth} reads and observed in fewer than ${maxSampleCount} samples in control database"
@@ -577,23 +277,53 @@ class FindNovelBreakpoints extends DefaultActor {
 	 * Close database connections
 	 */
 	void close() {
-		if(this.databaseConnections) {
-			databaseConnections.each { db ->
-				try {
-					db.close()
-				}
-				catch(Exception e) {
-					// Ignore	
-					log.warning("Failed to close database connection: " + e)
-				}
-			}
-		}
+	    this.databaseSet.close()
 	}
     
-    static void main(String [] args) {
+    /**
+     * Attempt to find / download the RefGene database for looking up regions and annotating
+     * breakpoint positions.
+     * 
+     * @param opts  Command line options
+     * @return  RefGenes object
+     */
+    static RefGenes getRefGene(OptionAccessor opts, SAM bam) {
+        String genomeBuild = opts.genome ? opts.genome : bam.sniffGenomeBuild()
+            
+        log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
+        RefGenes refGene
+        if(genomeBuild?.startsWith('hg') || genomeBuild.startsWith('GRCh'))
+            refGene = RefGenes.download(genomeBuild)
+    }
+    
+    /**
+     * Attempt to resolve a reference sequence to use for annotating breakpoint sequences
+     * 
+     * @param opts
+     * @return  a FASTA instance representing the reference, or null
+     */
+    static FASTA resolveReference(OptionAccessor opts) {
+        if(opts.ref) {
+            if(opts.ref == "auto") {
+                // hack: if we are using CRAM we can just use the same reference as for that.
+                return new FASTA(System.getProperty("samjdk.reference_fasta"))
+                
+                // TODO: if no property, get reference from BAM file?
+            }
+            else 
+                return new FASTA(opts.ref)
+        }
+    }
+    
+    /**
+     * Return a CLI argument parser configured to parse arguments for this tool
+     * 
+     * @param args
+     */
+    static Cli getCliParser() {
         Cli cli = new Cli(usage: "FindNovelBreakpoints <options>")
         cli.with {
-            bam 'BAM file to scan' ,args: 1, required:true
+            bam 'BAM file to scan', args: Cli.UNLIMITED, required:true
             db 'Breakpoint database(s)', args:Cli.UNLIMITED, required:false
             dbdir 'Breakpoint database directory - all files ending with .db are treated as databases', required: false, args:1
             mindp 'Minimum depth of breakpoints to report (3)', args:1, required: false
@@ -612,7 +342,18 @@ class FindNovelBreakpoints extends DefaultActor {
             html 'Create HTML report in given directory', args:1, required: false
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
         }
-        
+        return cli
+    }
+    
+    /**
+     * Main starting point
+     * 
+     * @param args  Command line arguments
+     */
+    static void main(String [] args) {
+
+        Cli cli = getCliParser()
+               
         Banner.banner()
         
         Utils.configureSimpleLogging()
@@ -627,55 +368,181 @@ class FindNovelBreakpoints extends DefaultActor {
             System.err.println "\nNo control database could be found! Please specify one with -db, -dbdir or place one in the databases directory"
             System.exit(1)
         }
-            
-        SAM bam = new SAM(opts.bam)
-        FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, opts.bam, dbFiles).start()
-		try {
-	        if(opts.ref) {
-	            if(opts.ref == "auto") {
-	                // hack: if we are using CRAM we can just use the same reference as for that.
-	                fnb.reference = new FASTA(System.getProperty("samjdk.reference_fasta"))
-	                
-	                // TODO: if no property, get reference from BAM file?
-	            }
-	            else 
-	                fnb.reference = new FASTA(opts.ref)
-	        }
-	        
-            String genomeBuild = opts.genome ? opts.genome : bam.sniffGenomeBuild()
-            
-            log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
-	        RefGenes refGene
-            if(genomeBuild?.startsWith('hg') || genomeBuild.startsWith('GRCh'))
-                refGene = RefGenes.download(genomeBuild)
-                
-	        Regions regions = resolveRegions(refGene, bam, opts)
-	        fnb.refGene = refGene
-	        
-	        if(regions) {
-	            fnb.run(regions)
-	        }
-	        else {
-	            fnb.run()
-	        }
-	            
-	        fnb.log.info(" Summary ".center(100,"="))
-	        fnb.log.info "Unfiltered breakpoint candidates: " + fnb.total
-	        fnb.log.info "Common breakpoints: " + fnb.tooCommon
-	        fnb.log.info "Reportable breakpoints: " + fnb.nonFiltered
-	        fnb.log.info "Partnered breakpoints: " + fnb.partnered
-	        fnb.log.info("="*100)
-	
-	        fnb.outputBreakpoints()
-	        
-	        if(opts.o)
-	            fnb.output.close()
-		}
-		finally {
-			fnb.close()
-		}
+        
+        if(opts.bams.size() == 1) {
+            processSingleBam(opts, opts.bams[0], dbFiles)
+        }
+        else {
+            processMultiBams(opts, opts.bams, dbFiles)
+        }
     }
     
+    static processMultiBams(OptionAccessor opts, List<String> bamFilePaths, List<String> dbFiles) {
+        
+        log.info "Analying BAM Files: $bamFilePaths"
+        
+        int concurrency = opts.concurrency ? opts.concurrecy.toInteger() : 1
+        
+        List<FindNovelBreakpoints> fnbs = GParsPool.withPool(concurrency) {
+            bamFilePaths.collectParallel { String bamFilePath ->
+                analyseSingleBam(opts, bamFilePath, dbFiles)
+            }
+        }
+            
+        // Merge the outputs
+        Map<Long, BreakpointInfo> mergedBreakpoints = mergeBreakpointInfos(fnbs*.breakpoints)
+            
+        FindNovelBreakpoints fnb = fnbs[0]
+        PrintStream output = getOutput(opts)
+        try {
+            new BreakpointTableWriter(
+                databases: fnb.databaseSet,
+                refGene: fnb.refGene,
+                options: opts
+            ).outputBreakpoints(
+                mergedBreakpoints.entrySet().stream().map { it.value },
+                mergedBreakpoints.size(),
+                output
+            )
+        }
+        finally {
+            output.close()
+        }
+    }
+    
+    /**
+     * 
+     */
+    static Map<Long, BreakpointInfo> mergeBreakpointInfos(List<List<BreakpointInfo>> breakpoints) {
+        log.info "Merging ${breakpoints*.size().sum()} breakpoints from ${breakpoints.size()} sets"
+        Map<Long, BreakpointInfo> result = new TreeMap()
+        ProgressCounter progress = new ProgressCounter(withTime: true, withRate: true)
+        for(List<BreakpointInfo> bpInfos in breakpoints) {
+            for(BreakpointInfo bpInfo in bpInfos) {
+                mergeBreakpointInfo(result, bpInfo)
+                progress.count()
+            }
+        }
+        progress.end()
+        return result
+    }
+    
+    /**
+     * If the given breakpoint exists, merge the information from the given breakpoint into it.
+     * Otherwise, create a new entry reflecting the given breakpoint.
+     * 
+     * @param mergeTo   target to merge into
+     * @param bpInfo    breakpoint to merge
+     */
+    static void mergeBreakpointInfo(Map<Long, BreakpointInfo> mergeTo, BreakpointInfo bpInfo) {
+        BreakpointInfo mergeInfo = mergeTo[bpInfo.id]
+        if(mergeInfo == null) {
+            mergeInfo = bpInfo.clone()
+            mergeTo[bpInfo.id] = mergeInfo
+        }
+        else {
+            mergeInfo.add(bpInfo)
+        }
+    }
+    
+    static void processSingleBam(OptionAccessor opts, String bamFilePath, List<String> dbFiles) {
+        PrintStream output = getOutput(opts)
+        FindNovelBreakpoints fnb = analyseSingleBam(opts, bamFilePath, dbFiles)
+        try {
+            printSummaryInfo(fnb)
+            
+            new BreakpointTableWriter(
+                databases: fnb.databaseSet,
+                refGene: fnb.refGene,
+                options: opts
+            ).outputBreakpoints(
+                fnb.breakpoints.stream(), 
+                fnb.breakpoints.size(),
+                output
+            )
+            
+            if(opts.o)
+                output.close()
+        }
+        finally {
+            fnb.close()
+        }
+    }
+    
+    /**
+     * Analyse a single bam file and return the resulting analysis object
+     * 
+     * @param opts          Options to control the analysis (thresholds, etc)
+     * @param bamFilePath   Path to BAM file to analyse
+     * @param dbFiles       List of control databases to use for filtering
+     * @return              a FindNovelBreakpoints object containing the breakpoints found
+     */
+    static FindNovelBreakpoints analyseSingleBam(OptionAccessor opts, String bamFilePath, List<String> dbFiles) {
+        
+        log.info "Analyzing ${bamFilePath}"
+        
+        SAM bam = new SAM(bamFilePath)
+        RefGenes refGene = getRefGene(opts, bam)
+        Regions regions = resolveRegions(refGene, bam, opts)
+        if(regions.numberOfRanges == 0)
+            regions = null
+            
+        FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, dbFiles).start()
+		try {
+            fnb.reference = resolveReference(opts)
+	        fnb.refGene = refGene
+	        fnb.run(regions)
+		}
+		catch(Exception e) {
+			fnb.close()
+            throw e
+		}
+        return fnb
+    }
+    
+    /**
+     * Print summary statistics from analyzing a BAM file
+     * 
+     * @param fnb
+     */
+    void printSummaryInfo(FindNovelBreakpoints fnb) {
+        log.info(" Summary ".center(100,"="))
+        log.info "Unfiltered breakpoint candidates: " + total
+        log.info "Common breakpoints: " + tooCommon
+        log.info "Reportable breakpoints: " + nonFiltered
+        log.info "Partnered breakpoints: " + partnered
+        log.info("="*100)
+    }
+    
+    /**
+     * Create an output PrintStream object appropriate for the given
+     * options. If no option specifies an output format, System.out
+     * is returned.
+     * 
+     * @param options
+     * 
+     * @return PrintStream to which output should be printed
+     */
+    static PrintStream getOutput(OptionAccessor options) {
+        if(options.o) {
+            File outputFile = new File(options.o)
+            log.info "Output file is " + outputFile.absolutePath
+            return new PrintStream(outputFile.newOutputStream())
+        }
+        else
+            return System.out
+    }
+    
+    /**
+     * Resolve a set of regions to analyse based on the given BAM file and
+     * on settings provided in the given options.
+     * 
+     * @param refGene
+     * @param bam
+     * @param opts  Options object containing settings: region (multi), pad, mask
+     * 
+     * @return  A flat set of regions representing the genomic regions to be analysed
+     */
     static Regions resolveRegions(RefGenes refGene, SAM bam, OptionAccessor opts) {
         Regions regions = null
         if(opts.regions) {

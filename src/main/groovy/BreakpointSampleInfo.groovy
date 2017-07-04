@@ -33,6 +33,12 @@ class BreakpointSampleInfo {
     
     final static int softClipSize = 15
     
+    
+    
+    // For unit testing
+    BreakpointSampleInfo() {
+    }
+    
     BreakpointSampleInfo(String sample, List<SAMRecord> reads) {
         this.sample = sample
         this.obs = reads.size()

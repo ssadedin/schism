@@ -19,12 +19,19 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import groovy.transform.AutoClone
 import groovy.transform.CompileStatic;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
 @CompileStatic
+@AutoClone
 class BreakpointInfo {
     
+    /**
+     * A universal identifier for the breakpoint position, in XPos form
+     * 
+     * @see {@link XPos} 
+     */
     Long id
     
     String chr
@@ -64,11 +71,40 @@ class BreakpointInfo {
     }
     
     void add(BreakpointMessage msg) {
-        obs += msg.reads.size()
-        ++sampleCount
         msg.reads.each { mapQStats.addValue(it.mappingQuality) }
-        observations << new BreakpointSampleInfo(msg.sample, msg.reads)
+        add(new BreakpointSampleInfo(msg.sample, msg.reads))
     }
+    
+    /**
+     * Merge the information from the given bpInfo into this BreakpointInfo
+     * 
+     * @param bpInfo
+     */
+    void add(BreakpointInfo bpInfo) {
+        for(BreakpointSampleInfo sampleInfo in bpInfo.observations) {
+            add(sampleInfo)
+        }
+        
+        // It is a (bad) approximation, but we just add N values at the
+        // mean Q value
+        double meanQ = bpInfo.mapQStats.mean
+        long n = bpInfo.mapQStats.N
+        for(long i=0; i<n; ++i) {
+            mapQStats.addValue(meanQ)
+        }
+    }
+    
+    /**
+     * Add the given sample info to this BreakpointInfo record
+     * 
+     * @param sampleInfo
+     */
+    void add(BreakpointSampleInfo sampleInfo) {
+        obs += sampleInfo.obs
+        ++sampleCount
+        observations << sampleInfo
+    }
+  
     
     String queryReference(FASTA reference, int numBases) {
         if(observations.any { it.startClips > 0 }) {
