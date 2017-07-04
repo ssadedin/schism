@@ -341,6 +341,7 @@ class FindNovelBreakpoints extends DefaultActor {
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
+            n 'Number of threads to use', args:1, required:false
         }
         return cli
     }
@@ -381,7 +382,7 @@ class FindNovelBreakpoints extends DefaultActor {
         
         log.info "Analying BAM Files: $bamFilePaths"
         
-        int concurrency = opts.concurrency ? opts.concurrecy.toInteger() : 1
+        int concurrency = opts.n ? opts.n.toInteger() : 1
         
         List<FindNovelBreakpoints> fnbs = GParsPool.withPool(concurrency) {
             bamFilePaths.collectParallel { String bamFilePath ->
