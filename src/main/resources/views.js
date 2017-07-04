@@ -249,6 +249,7 @@ Vue.component('BreakpointsView', {
             let excluded_samples = self.exclude_sample.split(',').map(x => x.trim())
             self.breakpoints = model.breakpoints.breakpoints.filter((bp) => { 
                 return ((bp.depth > self.obs_filter_threshold) && (bp.sample_count <= self.sample_count_filter_threshold)) &&
+                       (excluded_samples.indexOf(bp.sample) < 0) &&
                        excluded_samples.every( s => bp.samples.indexOf(s)<0)
             })
             console.log("There are now "+ self.breakpoints.length + " filtered breakpoints")
