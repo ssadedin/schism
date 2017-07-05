@@ -19,14 +19,12 @@ var DATA_COLUMNS = {
 'Genes' : 8
 }
 
-var BAM_FILES = [];
-
 var removeChrRegex = /^chr/;
 
 function igv_url_for_sample(sample) {
     var base='http://localhost:60151/';
-    if(BAM_FILES[sample]) {
-        return base + 'load?file='+encodeURIComponent(BAM_FILES[sample]) + '&';
+    if(bamFiles[sample]) {
+        return base + 'load?file='+encodeURIComponent(bamFiles[sample]) + '&';
     }
     else {
         return base + 'goto?';

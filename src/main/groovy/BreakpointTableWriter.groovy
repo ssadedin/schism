@@ -35,6 +35,8 @@ class BreakpointTableWriter {
     BreakpointDatabaseSet databases
     
     RefGenes refGene
+    
+    List<SAM> bams
    
     OptionAccessor options
     
@@ -124,6 +126,15 @@ class BreakpointTableWriter {
             
             htmlFile = new File(htmlDir, 'index.html').absoluteFile
             jsonWriter = new File(htmlDir, 'breakpoints.js').newWriter()
+            if(options.localBamPath) {
+                Map<String,String> bamFilesBySample = bams.collectEntries { 
+                    [it.samples[0], options.localBamPath + it.samFile.name]
+                }
+                jsonWriter.println('bamFiles = ' + JsonOutput.toJson(bamFilesBySample))
+            }
+            else
+                jsonWriter.println('bamFiles = {}')
+                
             jsonWriter.println('js_load_data = [')
         }
                 

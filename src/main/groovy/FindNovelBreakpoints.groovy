@@ -342,6 +342,7 @@ class FindNovelBreakpoints extends DefaultActor {
             html 'Create HTML report in given directory', args:1, required: false
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
             n 'Number of threads to use', args:1, required:false
+            localBamPath 'Prefix to path to BAM files, to enable loading in the HTML interface via IGV', args:1, required: false
         }
         return cli
     }
@@ -399,7 +400,8 @@ class FindNovelBreakpoints extends DefaultActor {
             new BreakpointTableWriter(
                 databases: fnb.databaseSet,
                 refGene: fnb.refGene,
-                options: opts
+                options: opts,
+                bams: fnb*.bam
             ).outputBreakpoints(
                 mergedBreakpoints.entrySet().stream().map { it.value },
                 mergedBreakpoints.size(),
