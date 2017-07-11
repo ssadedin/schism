@@ -452,7 +452,7 @@ class FindNovelBreakpoints extends DefaultActor {
         PrintStream output = getOutput(opts)
         FindNovelBreakpoints fnb = analyseSingleBam(opts, bamFilePath, dbFiles)
         try {
-            printSummaryInfo(fnb)
+            fnb.printSummaryInfo()
             
             new BreakpointTableWriter(
                 databases: fnb.databaseSet,
@@ -508,7 +508,7 @@ class FindNovelBreakpoints extends DefaultActor {
      * 
      * @param fnb
      */
-    void printSummaryInfo(FindNovelBreakpoints fnb) {
+    void printSummaryInfo() {
         log.info(" Summary ".center(100,"="))
         log.info "Unfiltered breakpoint candidates: " + total
         log.info "Common breakpoints: " + tooCommon
