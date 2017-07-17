@@ -83,6 +83,7 @@ class BreakpointTableWriter {
         'schism.js',
         'views.js',
         'vue.js',
+        'vue-js-modal.js',
         'vuetiful.css',
         'vuetiful.js'
     ]

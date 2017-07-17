@@ -1,5 +1,7 @@
 //= require vue.js
 
+Vue.use(window['vue-js-modal'].default)
+
 var groupBy = window.groupBy;
 
 var BP_TYPES = ['noise','deletion','insertion','microduplication',
@@ -23,12 +25,74 @@ var removeChrRegex = /^chr/;
 
 function igv_url_for_sample(sample) {
     var base='http://localhost:60151/';
-    if(bamFiles[sample]) {
-        return base + 'load?file='+encodeURIComponent(bamFiles[sample]) + '&';
+    if(window.bamFiles && bamFiles[sample]) {
+        let breakpointPath = bamFiles[sample]
+        if(components.BreakpointsView.bamFilePrefix) {
+            breakpointPath = components.BreakpointsView.bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
+        }
+        return base + 'load?file='+encodeURIComponent(breakpointPath)+ '&';
     }
     else {
         return base + 'goto?';
     }
+}
+
+function igv_link(contents, bpIndex, start, end) {
+    return `<a href="#" onclick="return go_igv(${bpIndex}, ${start}, ${end})">${contents}</a>` 
+}
+
+function go_igv(breakpointIndex, start /* optional */, end /* optional */) {
+    var base='http://localhost:60151/';
+    var bp = model.breakpoints.breakpoints[breakpointIndex];
+    if(window.bamFiles && bamFiles[bp.sample]) {
+        let breakpointPath = bamFiles[bp.sample]
+        if(components.BreakpointsView.bamFilePrefix) {
+            breakpointPath = components.BreakpointsView.bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
+        }
+        base += 'load?file='+encodeURIComponent(breakpointPath)+ '&';
+    }
+    else {
+        base += 'goto?';
+    }
+    
+    let url = base + 'locus='+bp.chr+ ':' + start +'-'+end;
+    console.log("Navigate IGV using URL: " + url)
+    $('#igv')[0].src = url;
+}
+
+
+let DIST_CLASS_DESC = {
+        "none" : "Any",
+        "far" : "Region (20kbp)",
+        "inside" : "In Coding Region",
+        "adjacent" : "Very Near (50bp)",
+        "close" : "Near (500bp)",
+}
+
+let DIST_THRESHOLDS = {
+    'close': 500,
+    adjacent: 50,
+    inside: 0,
+}
+
+function compute_dist_class(cds_dist) {
+   var distClass = "far";
+   if(cds_dist<0) {
+       distClass="none";
+   }
+   else
+   if(cds_dist==0) {
+       distClass="inside"
+   }
+   else
+   if(cds_dist<50) {
+       distClass="adjacent"
+   }               
+   else
+   if(cds_dist<500) {
+       distClass="close"
+   } 
+   return distClass;
 }
 
 var TABLE_COLUMNS = [
@@ -48,8 +112,8 @@ var TABLE_COLUMNS = [
                var eventSize = Math.abs(partnerPos-pos);
                if(eventSize > 1000) {
                    sizeInfo = ' <span class=largeEvent>(' + 
-                   '<a href="' + igv_url_for_sample(row.sample) + 'locus='+chr+ ':' + (pos-600) +'-'+(partnerPos+600)+ '" target=igv>' +
-                                eventSize +  'bp' + '</a>)</span>';
+                       igv_link(`${eventSize} bp`, row.index, pos - 600, partnerPos+600) + 
+                   ')</span>';
                }
                else {
                    sizeInfo = ' (' + eventSize + 'bp)';
@@ -65,7 +129,7 @@ var TABLE_COLUMNS = [
    { title: 'Samples', data: 'sample_count', className: 'sample_count' },
    { title: 'Sample Obs', data: 'depth', className: 'depth' },
    { title: 'Samples', data: 'samples', className: 'samples', render: function(data,type,row) {
-           return row.samples.join(',')
+           return row.samples.join(', ')
        }
    },
    { title: 'Genes', data: 'genes', render: function(data,type,row) {
@@ -76,22 +140,7 @@ var TABLE_COLUMNS = [
            return row.genes.map(function(g,i) {
                let url = 'http://www.genecards.org/cgi-bin/carddisp.pl?gene='+encodeURIComponent(g)+'&search='+g+'#diseases'
                let cds_dist = row.cdsdist[i];
-               var distClass = "far";
-               if(cds_dist<0) {
-                   distClass="none";
-               }
-               else
-               if(cds_dist==0) {
-                   distClass="inside"
-               }
-               else
-               if(cds_dist<50) {
-                   distClass="adjacent"
-               }               
-               else
-               if(cds_dist<500) {
-                   distClass="close"
-               }
+               let distClass = compute_dist_class(cds_dist);
                var geneLists = '';
                /*
                if(GENE_LISTS[g.gene]) {
@@ -105,9 +154,7 @@ var TABLE_COLUMNS = [
        }
    },
    { title: 'IGV', data: 'chr', render: function(data,type,row) {
-           return '<a href="'+igv_url_for_sample(row.sample) 
-                             + 'locus='+row.chr + ':' + 
-                  (row.start-300) +'-'+(row.end+300)+ '" target=igv>IGV</a>';
+           return igv_link('IGV', row.index, row.start, row.end);
        }
    }
 ]
@@ -169,7 +216,7 @@ Vue.component('BreakpointsView', {
                     data: this.breakpoints,
 //                    createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
                     columns: TABLE_COLUMNS,
-                    pageLength: 20
+                    pageLength: 15
                 } );
                 
                 $('#breakpoint-table').css('width','100%')
@@ -241,31 +288,62 @@ Vue.component('BreakpointsView', {
         this.highlightedRow = tr;
     },
     
-    methods: { // todo
+    methods: { 
         
-        filterSamples: (self) => {
-            let excluded_samples = self.exclude_sample.split(',').map(x => x.trim())
-            self.breakpoints = model.breakpoints.breakpoints.filter((bp) => { 
-                return ((bp.depth > self.obs_filter_threshold) && (bp.sample_count <= self.sample_count_filter_threshold)) &&
-                       (excluded_samples.indexOf(bp.sample) < 0) &&
-                       excluded_samples.every( s => bp.samples.indexOf(s)<0)
-            })
+        filterBreakpoint: function(excluded_samples, distThreshold, bp) {
+                if((bp.depth <= this.obs_filter_threshold) || (bp.sample_count > this.sample_count_filter_threshold))
+                    return false;
+                
+                if(excluded_samples.some(excl => {
+                    if(excl instanceof RegExp) {
+                        return bp.sample.match(excl) || bp.samples.some(s => s.match(excl))
+                    }
+                    else {
+                        return (bp.sample == excl) || (bp.samples.indexOf(excl) > 0)
+                    }
+                }))
+                    return false
+                
+//                if((excluded_samples.indexOf(bp.sample) >= 0) ||  excluded_samples.some( s => bp.samples.indexOf(s)>=0))
+//                    return false;
+                    
+                return ((distThreshold === false) || (bp.cdsdist &&  bp.cdsdist.some(d => (d >= 0) && (d <= distThreshold))));
+        },
+        
+        filterSamples: function() {
+            console.log("dist category: " + this.gene_proximity)
+            let distThreshold =  this.gene_proximity == 'Any' ? false : DIST_THRESHOLDS[this.gene_proximity]
+            if(typeof distThreshold == 'undefined')
+                distThreshold = false;
+            
+            console.log("Dist threshold = " + distThreshold)
+            
+            let self = this;
+            let excluded_samples = self.exclude_sample.split(',')
+                                       .map(x => x.trim())
+                                       .map(x => x.startsWith("~") ? new RegExp(x.slice(1)) : x);
+            
+            this.breakpoints = model.breakpoints.breakpoints.filter(this.filterBreakpoint.bind(this,excluded_samples,distThreshold)) 
             console.log("There are now "+ self.breakpoints.length + " filtered breakpoints")
         },
         
         updateObsFilter : function() {
             console.log('Changing min sample obs to ' + this.obs_filter_threshold); 
-            this.filterSamples(this)
+            this.filterSamples()
         },
         updateSampleCountFilter : function() { 
             console.log('Changing max sample count to ' + this.sample_count_filter_threshold); 
-            this.filterSamples(this)
+            this.filterSamples()
             console.log("There are now "+ this.breakpoints.length + " breakpoints")
         },
         updateExcludedSamples : function() { 
             console.log('Changing excluded samples to ' + this.exclude_sample); 
-            this.filterSamples(this)
-        }  
+            this.filterSamples()
+        } ,
+        configure: function() {
+            this.$modal.show('configuration-modal')
+            setTimeout(() => this.$refs.bamFilePrefixInput.focus(), 10)
+        }
     },
   
   
@@ -278,7 +356,10 @@ Vue.component('BreakpointsView', {
           obs_filter_threshold: 3,
           sample_count_filter_threshold: 10,
           breakpointTable: null,
-          exclude_sample: ''
+          exclude_sample: '',
+          bamFilePrefix: null,
+          gene_proximity: "none",
+          DIST_CLASS_DESC: DIST_CLASS_DESC
       }
   },
   
@@ -290,19 +371,39 @@ Vue.component('BreakpointsView', {
                 <label for=exclude_sample>Exclude</label>
                 <input v-model="exclude_sample" placeholder="Exclude samples" v-on:change="updateExcludedSamples">
             
-                <label for=obs_filter_threshold>Min Reads Supporting Breakpoint</label>
+                <label for=obs_filter_threshold>Min Reads</label>
                 <select v-model="obs_filter_threshold" v-on:change="updateObsFilter">
                     <option v-for="option in obs_filter_levels" v-bind:value="option">
                     {{ option }}
                     </option>
                 </select>
                 
-                <label for=obs_filter_threshold>Max Samples with Breakpoint</label>
+                <label for=obs_filter_threshold>Max Samples</label>
+                
                 <select v-model="sample_count_filter_threshold" v-on:change="updateSampleCountFilter">
                     <option v-for="option in sample_count_filter_levels" v-bind:value="option">
                     {{ option }}
                     </option>
                 </select> 
+                
+                Gene Proximity
+                <select v-model="gene_proximity" v-on:change="filterSamples">
+                    <option v-for="option in Object.keys(DIST_CLASS_DESC)" v-bind:value="option">
+                        {{DIST_CLASS_DESC[option]}}
+                    </option>
+                </select>
+                
+                <a href='#' v-on:click.prevent='configure'><span class='configure'>&#x2699;</span></a>
+                
+                <modal name='configuration-modal'>
+                    <div class=content_panel_wrapper>
+                        <h2>Configuration</h2>
+                        <label class='left'>Prefix for Accessing BAM Files: </label>
+                        <div class='rightFill'><input type='text' ref='bamFilePrefixInput' v-model='bamFilePrefix'></div>
+                    </div>
+                    
+                </modal>
+                
             </div>
         </div>
         

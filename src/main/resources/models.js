@@ -18,6 +18,7 @@ class Breakpoints {
     load(src) {
         loadAndCall(this.dataFiles, (bps) => {
             console.log("Loaded " + bps.length + " breakpoints");
+            bps.forEach( (bp,i) => bp.index = i)
             this.breakpoints = bps;
             $(this).trigger('breakpoints:change');
         })

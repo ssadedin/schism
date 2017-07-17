@@ -33,6 +33,7 @@ td.sample, td.sample_count, td.depth { text-align: center; }
 tr.highlight, tr.highlighted, tr.highlight td.sorting_1 {
     background-color: #ffeeee !important;
 }
+
 span.rightform {
     float: right;
     font-size: 85%;
@@ -101,6 +102,34 @@ div.spacer {
 #form-container {
  text-align: right;
  font-size: 12px;
- margin: 8px 0px 8px 5px;
+ margin: 0px 0px 12px 5px;
 }
     
+span.configure {
+ font-size: 18px;
+ font-weight: bold;
+ padding: 0 1em;
+}
+
+.left {
+ float: left;
+ width: 16em;
+ display: block;
+ text-align: right;
+}
+
+.rightFill {
+  margin-left: 18em;
+  display: block;
+  padding-left: 1em;
+}
+.rightFill input {
+    width: 100%;
+    position: relative;
+    top: -2px;
+}
+
+input.wide {
+    width: 20em;
+}
+*/

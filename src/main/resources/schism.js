@@ -71,6 +71,7 @@ function loadAndCall(srcs, fn) {
     loadJs(fn, srcs.map(b => b)) 
 }
 
+var components = {};
 
 var config = {
         content: [
@@ -103,6 +104,7 @@ function mountVueComponent(container, id, componentName, props) {
     container.getElement().html( `<div id='${id}'></div>` );
     let componentConstructor = Vue.component(componentName)
     let component = new componentConstructor(props)
+    components[id] = component;
     setTimeout(function() {
         component.$mount('#'+id)
     }, 0) 
