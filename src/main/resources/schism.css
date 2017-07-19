@@ -132,4 +132,44 @@ span.configure {
 input.wide {
     width: 20em;
 }
-*/
+
+path.partnerLink {
+    stroke:#f77;
+    stroke-width:1;
+    fill:none;
+}
+
+path.partnerLink:hover {
+    stroke-width:3;
+}
+
+text.geneLabel {
+ font-size: 11px;
+ font-weight: normal;
+ stroke: none;
+ fill: #444;
+}
+
+path.partnerArrows {
+ fill: #f77;
+}
+
+rect.breakpointFrame {
+    stroke: #000;
+    stroke-width: 1px;
+    fill: none;
+}
+
+path.frameTick {
+    stroke: #000;
+    stroke-width: 1px;
+    fill: none;
+}
+
+text.tickLabel {
+    font-size: 9px;
+}
+
+text.tickChromosomeLabel {
+    font-size: 15px;
+}

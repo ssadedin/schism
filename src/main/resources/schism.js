@@ -74,28 +74,46 @@ function loadAndCall(srcs, fn) {
 var components = {};
 
 var config = {
-        content: [
-            {
-                type: 'row',
-                content: [{
-                                type: 'stack',
-                                content:[
-//                                   {
-//                                        type: 'component',
-//                                        componentName: 'SummaryView',
-//                                        componentState: { breakpoints: [] },
-//                                        isClosable: false, 
-//                                   },
-                                   {
-                                            type: 'component',
-                                            title: 'Breakpoints',
-                                            componentName: 'BreakpointsView',
-                                            componentState: { label: 'B' }
-                                   }
-                               ]
-                          }]
-            }]
+    content: [
+        {
+            type: 'column',
+            content: [ 
+                {   
+                    type: 'row', // Top row - BreakpointsView
+                    content:[
+                        { 
+                            type: 'stack',
+                            content:[{
+                                type: 'component',
+                                title: 'Breakpoints',
+                                componentName: 'BreakpointsView',
+                                componentState: { }
+                            }]
+                        }]
+                } // Note: after this will be added breakpoint detail views
+        ]
+  }]
 };
+
+function getMainColumn() {
+   return window.layout.root.contentItems[0]; 
+}
+
+function addLowerTab(contentWindow) {
+    let mainColumn = getMainColumn()
+            
+    // If there is no 2nd child, we add a stack to the main column
+    if(mainColumn.contentItems.length == 1) {
+        mainColumn.addChild({
+            type: 'stack',
+            content: [contentWindow]
+        })
+    }
+    else {
+        mainColumn.contentItems[1].addChild(contentWindow);
+    }
+}
+
 
 function mountVueComponent(container, id, componentName, props) {
     
@@ -103,7 +121,8 @@ function mountVueComponent(container, id, componentName, props) {
     
     container.getElement().html( `<div id='${id}'></div>` );
     let componentConstructor = Vue.component(componentName)
-    let component = new componentConstructor(props)
+    let component = new componentConstructor({data:props})
+    component.container = container;
     components[id] = component;
     setTimeout(function() {
         component.$mount('#'+id)
@@ -112,25 +131,39 @@ function mountVueComponent(container, id, componentName, props) {
 
 var layout = null;
 
+/**
+ * Registers a Vue component with GoldenLayout so that GoldenLayout can
+ * create it on demand. This implementation relies on each GoldenLayout 
+ * component containing an 'id' property in its state, which is used to ensure
+ * the Vue instance binds to a unique, identifiable DOM element.
+ * 
+ * @param componentName
+ * @returns
+ */
 function registerVueComponent(componentName) {
-    layout.registerComponent(componentName, function( container, componentState) {
-        mountVueComponent(container, componentName, componentName, componentState)
+    layout.registerComponent(componentName, function(container, componentState) {
+        let id = componentState.id || componentName;
+        mountVueComponent(container, id, componentName, componentState)
     })
 }
+
+
 
 $(document).ready(function() {
     
     window.model = {
-        breakpoints : new Breakpoints({dataFiles: breakpoint_srcs})
+        breakpoints : new Breakpoints({dataFiles: breakpoint_srcs}),
+        genes: []
     }
     
     model.breakpoints.load()
     
     layout = new GoldenLayout( config, $('#content')[0] );
-   
+    
     registerVueComponent('SummaryView')
     registerVueComponent('BreakpointsView')
-    
+    registerVueComponent('BreakpointDiagram')
+   
     let footer = $('.footer')
     let footerHeight = footer.outerHeight()
     

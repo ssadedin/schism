@@ -85,7 +85,8 @@ class BreakpointTableWriter {
         'vue.js',
         'vue-js-modal.js',
         'vuetiful.css',
-        'vuetiful.js'
+        'vuetiful.js',
+        'underscore.js'
     ]
     
     void copyStaticAssetsToHTMLDir(File htmlDir) {
@@ -145,6 +146,7 @@ class BreakpointTableWriter {
         
         boolean first = true
         int count = 0
+        Set<String> genes = new HashSet()
         
         ProgressCounter progress = new ProgressCounter(withTime:true, withRate:true, extra: {
             percFormat.format((double)(count+1)/(breakpointCount+1)) + " complete" 
@@ -173,6 +175,8 @@ class BreakpointTableWriter {
             }
             
             output.println(breakpointLine.join('\t'))
+            
+            genes.addAll(bp.genes)
             
             if(jsonWriter) {
                 
@@ -221,11 +225,32 @@ class BreakpointTableWriter {
             }
         }
         
+        
         if(jsonWriter) {
             jsonWriter.println('\n]')
+            writeGeneInfo(jsonWriter,genes)
             jsonWriter.close()
         }
         
         progress.end()
+    }
+    
+    void writeGeneInfo(Writer jsonWriter, Set<String> genes) {
+        
+        assert refGene != null
+        
+        log.info "Writing meta data for ${genes.size()} genes: $genes"
+        
+        Map geneInfo = genes.collectEntries {  gene ->
+            def exons = refGene.getExons(gene)
+            [ 
+              gene, 
+              [
+                  exons: exons.collect {[ from: it.from, to: it.to]}
+              ]
+            ]
+        }
+        
+        jsonWriter.println("genes = " + JsonOutput.toJson(geneInfo) + ";")
     }
 }

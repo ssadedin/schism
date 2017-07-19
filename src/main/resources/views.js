@@ -4,6 +4,419 @@ Vue.use(window['vue-js-modal'].default)
 
 var groupBy = window.groupBy;
 
+/************************ Breakpoint Diagrams **********************************/
+
+let markerId = 0
+Vue.component('BreakpointDiagram',{
+    
+    props: ['breakpoint'],
+    
+    created: function() {
+        // Don't know why I have to set this here?
+        // VueJS should do it for me if the prop is provided?
+//        this.breakpoint = this.$options.breakpoint;
+    },
+    
+    mounted: function() {
+        
+        let bp = this.breakpoint;
+        
+        window.bp = bp;
+        
+        // Start by ordering the genes by start position
+        let genes = bp.genes.map(g => { return { gene: g, info: model.breakpoints.genes[g] }})
+                            .filter(g => g.info.exons.length>0)
+                            .map((geneAndInfo,i) => {
+                                let g = geneAndInfo.info;
+                                return {
+                                    gene: geneAndInfo.gene,
+                                    index: i,
+                                    start: g.exons[0].from,
+                                    end: g.exons[g.exons.length-1].to,
+                                    exons: g.exons
+                                }
+                            })
+                            
+        genes = _.sortBy(genes, g => g.start)
+        genes.forEach(g => g.exons.forEach(e => e.gene = g))
+                            
+        let xPadding = 80;
+        
+        let plotLayout = {
+            intronSize : 10,
+            xPadding: xPadding,
+            width: 1280,
+            xOffset : xPadding / 2,
+            baselineY : 50,
+            exonHeight : 14,
+            labelFontSize: 9, // Font size in px
+            xScale : null, // populated later
+            geneGap : 30,
+            geneColors: ['#3a3','#5c5'],
+            breakpointHeight: 20,
+            genomePadding: 100 // Bases upstream / downstream to display
+        }
+        
+        this.computeScales(bp, genes, plotLayout)
+        
+        console.log("Domains are: " + plotLayout.domains);
+        console.log("Ranges are: " + plotLayout.ranges);
+
+        var xScale = d3.scale.linear()
+            .domain(plotLayout.domains)
+            .range(plotLayout.ranges);
+        
+        plotLayout.xScale = xScale;
+        
+        var yScale = d3.scale.linear()
+                 .domain([-0.25,2.5])
+                 .range([0,200]);
+  
+        let starts = genes.map(g => g.start)
+        let widths = genes.map(g => g.end - g.start)
+        
+        let xs = starts.map(xScale)
+        let ys = starts.map(s => yScale(0))
+        let heights = starts.map(s => yScale(1))
+        
+        let svg = d3.select(this.$refs.svg)
+        
+        this.addEndMarker(svg, plotLayout)
+        window.svg = svg;
+        window.xScale = plotLayout.xScale;
+        
+        this.drawGenes(plotLayout, svg, genes)
+        this.drawBreakpoints(plotLayout, svg, [bp])
+        this.drawFrame(plotLayout, svg)
+    },
+    
+    methods: {
+        
+        drawFrame: function(plotLayout, svg) {
+            
+            let domains = plotLayout.domains
+            let ranges = plotLayout.ranges
+            let xScale = plotLayout.xScale;
+            
+            let frameHeight = 150
+            let frameBaselineY = plotLayout.baselineY-35
+                
+            svg.append('rect')
+               .attr('x', 2)
+               .attr('y', frameBaselineY)
+               .attr('width', plotLayout.width-2)
+               .attr('height', frameHeight)
+               .attr('class', 'breakpointFrame')
+               .attr('rx',2)
+               .attr('ry',2)
+               
+           let tickBaseline = frameBaselineY-5+frameHeight
+           
+           // Mark 10 positions along the frame
+           let tickRange = [domains[0],domains[domains.length-1]]
+           let tickWidth = tickRange[1] - tickRange[0]
+            
+           let tickGaps = [10,50,100,200,500,1000,5000,10000,20000,50000,100000,200000,500000]
+            
+           let tickGapIndex = _.findIndex(tickGaps.reverse(),gap => 10 * gap < tickWidth)
+           if(tickGapIndex < 0) {
+               console.log("WARNING: unable to find a good tick interval for labeling genome graph")
+               return
+           }
+            
+           let tickGap = tickGaps.reverse()[tickGapIndex]
+           
+           // Round the minimum to the same resolution as the tick gap interval
+           let tickMin = Math.floor(domains[0] / tickGap) * tickGap
+           
+           let tickIndices = []
+           let i = 0
+           while((i*tickGap) < (tickRange[1]-tickGap)) {
+               tickIndices.push(i++)
+           }
+           
+           // Draw the tick marks
+           svg.selectAll('path.frameTicks')
+              .data(tickIndices)
+              .enter()
+              .append('path')
+              .attr('d', tickNum => { return `M ${xScale(tickMin + tickNum*tickGap)} ${tickBaseline-2} L ${xScale(tickMin+tickNum*tickGap)} ${tickBaseline+5}` } )
+              .attr('class','frameTick')
+              
+              
+           // Draw the tick labels
+           svg.selectAll('text.tickLabel')
+              .data(tickIndices)
+              .enter()
+              .append('text')
+              .attr('x', tickNum => xScale(tickMin + tickNum*tickGap) - 20)
+              .attr('y', tickBaseline+15)
+              .text( tickNum => tickMin + tickNum*tickGap)
+              .attr('class', 'tickLabel')
+  
+          svg.append('text')
+             .attr('x', (ranges[1] + ranges[0]) / 2)
+             .attr('y', tickBaseline+35)
+             .attr('class', 'tickChromosomeLabel')
+             .text('Chromosome ' + this.breakpoint.chr.replace('chr',''))
+        },
+        
+        
+        
+        addEndMarker: function(svg, plotLayout) {
+            plotLayout.arrowMarkerId = 'arrow-'+markerId++;
+            
+            svg.append("svg:defs").append("svg:marker")
+               .attr("id", plotLayout.arrowMarkerId)
+               .attr("refX", 6)
+               .attr("refY", 3)
+               .attr("markerWidth", 30)
+               .attr("markerHeight", 30)
+               .attr("orient", "auto")
+               .append("path")
+               .attr("d", "M 0 0 6 3 0 6 1.5 3")
+               .attr("class", "partnerArrows")
+        },
+        
+        drawBreakpoints: function(plotLayout, svg, breakpoints) {
+            
+            let xScale = plotLayout.xScale;
+            let domains = plotLayout.domains
+            
+            let samples = breakpoints.map(bp => bp.sample)
+            let chrs = breakpoints.map(bp => bp.chr)
+            
+            let newBreakPointEls = 
+                svg.selectAll('rect.breakpoint') 
+                   .data(breakpoints)
+                   .enter()
+                   
+            let secondaryBreakpoints = model.breakpoints.breakpoints.filter(bp => {
+                if(samples.indexOf(bp.sample) < 0)
+                    return false
+                    
+                if(chrs.indexOf(bp.chr) < 0)
+                    return false
+                     
+                return (bp.start > domains[0]) && (bp.end < domains[domains.length-1])
+            })
+            
+            console.log(`Drawing ${secondaryBreakpoints.length} secondary breakpoints`)
+            
+            let secondaryBreakPointEls = 
+                svg.selectAll('rect.otherbreakpoint') 
+                   .data(secondaryBreakpoints)
+                   .enter()
+            
+            this.appendBreakpointSymbol(plotLayout, secondaryBreakPointEls, {color: '#f77'})
+            this.appendBreakpointSymbol(plotLayout, newBreakPointEls, {color: '#b22'})
+            
+            // Link any secondary breakpoints to the primary
+            let secondaryBreakpointIndex = _.indexBy(secondaryBreakpoints.filter(bp => bp.partner != ""), 'partner')
+            
+            let partners = breakpoints.filter(bp => bp.partner != "")
+                                      .concat(secondaryBreakpoints.filter(sbp => sbp.partner != ""))
+            
+            
+            console.log(`Drawing ${partners.length} partners`)
+            
+            let yOffset = 0;
+            
+            let inDomains = function(x) {
+                return x > domains[0] && x < domains[domains.length-1]
+            }
+           
+            // Draw links to partners
+            svg.selectAll('path.partnerLink')
+               .data(partners)
+               .enter()
+               .append('path')
+               .attr('class','partnerLink')
+               .attr('d', bp => {
+                   let [chr,pos] = bp.partner.split(':')
+                   let linkY = plotLayout.baselineY -1
+                   if(chr == bp.chr) {
+                       if(inDomains(bp.start) && !inDomains(pos)) {
+                           return `M ${xScale(bp.start)} ${linkY} L ${xScale(bp.start)+Math.sign(pos - bp.start)*30} ${linkY}`
+                       }
+                       else
+                       if(!inDomains(bp.start) && inDomains(pos)) {
+                           return `M ${xScale(bp.start)} ${linkY} L ${xScale(bp.start)+Math.sign(bp.start - pos)*30} ${linkY}`
+                       }                       
+                       else {
+                           return `M ${xScale(bp.start)} ${linkY} Q ${(xScale(pos) + xScale(bp.start))/2} ${linkY-30-(yOffset++)} ${xScale(pos)} ${linkY}`
+                       }
+                   }
+                   else {
+                       console.log(`Partner ${bp.partner} on different chromosome: ${chr}`)
+                   }
+               })
+               .attr('marker-end', `url(#${plotLayout.arrowMarkerId})`)
+        },
+          
+        appendBreakpointSymbol(plotLayout, d3Els, props) {
+              d3Els.append('rect')
+                   .attr('x', (bp) => xScale(bp.start) -1)
+                   .attr('width', (bp) => 2)
+                   .attr('y', (bp) => plotLayout.baselineY)
+                   .attr('height', (bp) => plotLayout.breakpointHeight)
+                   .attr('style', (g,i) => `stroke:${props.color};stroke-width:1;fill:${props.color};`)
+                   .attr('rx',2)
+                   .attr('ry',2)
+        },
+        
+        drawGenes: function(plotLayout, svg, genes) {
+                
+            let allExons = [].concat.apply([],genes.map(g => g.exons))
+            
+            let geneY = 100
+            let exonHeight = 15
+            
+            // debug
+            window.genes = genes;
+            window.exons = allExons;
+
+            let geneColors = plotLayout.geneColors
+            
+            svg.selectAll('rect.geneRect')
+               .data(genes).enter()
+               .append('rect')
+                  .attr('x',(g) => { 
+                      console.log("gene " + g.gene + " start: " + g.start + ", exons[0].to="+xScale(g.exons[0].to)); 
+                      return xScale(g.exons[0].to);
+                   })
+                  .attr('class','geneRect')
+                   .attr('y',(g) => geneY-2)
+                   .attr('width',(g) => { 
+                       let w = xScale(g.exons[g.exons.length-1].from) - xScale(g.exons[0].to)
+                       return w;
+                   }) 
+                   .attr('height',(g) => 4)
+                   .attr('style', (g,i) => `stroke:${geneColors[i%2]};stroke-width:1;fill:${geneColors[i%2]};`)
+                   .attr('rx',2)
+                   .attr('ry',2)
+                   
+            let geneLabels = Object.values(_.groupBy(genes, g => Math.round((g.start + g.end / 2)/10)))
+            
+            svg.selectAll('text.geneLabel')
+               .data(geneLabels).enter()
+               .append('text')
+                  .attr('x',(genes) => { return (xScale(genes[0].end) + xScale(genes[0].start))/2 })
+                  .attr('y',(genes) => geneY+25)
+                  .attr('class','geneLabel')
+                  .text(genes => genes.map(g => g.gene).join(", "))
+            
+            svg.selectAll('rect.exonRect')
+               .data(allExons).enter()
+               .append('rect')
+                  .attr('x',(e) => { 
+                      return xScale(e.from);
+                   })
+                  .attr('class','exonRect')
+                   .attr('y',(e) => geneY-exonHeight)
+                   .attr('width',(e) => xScale(e.to) - xScale(e.from))
+                   .attr('height',(e) => exonHeight*2)
+                   .attr('style',(e,i) => { 
+                       let color=geneColors[e.gene.index%geneColors.length]; 
+                       return `stroke:;stroke-width:1;fill:${color};`
+                    })
+                   .attr('rx',2)
+                   .attr('ry',2)
+        },
+        
+        computeScales: function(bp, genes, plotLayout) {
+            let sum = (x) => x.reduce((acc,n) => acc+n, 0)
+            
+            // Find the minimum of the exons and the bp
+            let minPos = Math.min(bp.start, genes[0].start)
+            let maxPos = Math.max(bp.start, genes[genes.length-1].end)
+            
+            let width = plotLayout.width - plotLayout.xPadding 
+            
+            let domains = [minPos-plotLayout.genomePadding, maxPos + plotLayout.genomePadding]
+            let ranges = [plotLayout.xPadding, plotLayout.width - plotLayout.xPadding]
+            Object.assign(plotLayout,{
+                domains : domains,
+                ranges: ranges
+            })
+        },
+        
+        /**
+         * Not currently used - shows exons at fixed size and scales introns
+         * to fit in gaps. Since most breakpoints are actually in introns I don't
+         * think this is as useful, but there may still be a case for using a different scale
+         * for introns vs exons
+         */
+        computeScalesExpandedExons: function(bp, genes, plotLayout) {
+            
+            let sum = (x) => x.reduce((acc,n) => acc+n, 0)
+            
+            let bases = sum(genes.map((g) => sum(g.exons.map(e => e.to - e.from))))
+            let numIntrons = sum(genes.map(g => g.exons.length-1))
+            
+            let domains = [];
+            
+            // We construct the x-scale piecewise with gaps between each
+            // target region
+            let ranges = [];
+            let geneGap = plotLayout.geneGap
+            let widthForExonicBases = plotLayout.width - plotLayout.xPadding - plotLayout.intronSize*numIntrons - geneGap*(genes.length-1)
+            window.widthForExonicBases = widthForExonicBases;
+            let scaleFactor = (widthForExonicBases) / bases;
+            let prevEnd = plotLayout.xOffset;
+            let prev = null
+            
+            if(bp.start < genes[0].exons.from) {
+                domains.push(bp.start)
+                ranges.push()
+                prev = {
+                    start: bp,
+                    end : genes[0].exons.to
+                }
+            }
+                
+            genes.forEach(function(g) { 
+               // Add a gap between genes
+               if(prev != null) {
+                    domains.push(prev.end)
+                    domains.push(g.start)
+                    
+                    ranges.push(prevEnd)
+                    ranges.push(prevEnd+geneGap)
+                    prevEnd = prevEnd+geneGap 
+                }
+               
+                g.exons.forEach(e => { domains.push(e.from); domains.push(e.to); })
+                
+                g.exons.forEach(e => {
+                    ranges.push(prevEnd); 
+                    var targetEnd = prevEnd + (scaleFactor*(e.to-e.from));
+                    ranges.push(targetEnd); 
+                    prevEnd = targetEnd + plotLayout.intronSize;
+                }) 
+                prev = g
+            });
+            plotLayout.ranges = ranges;
+            plotLayout.domains = domains;
+        }
+    },
+    
+    data: function() {
+        return {
+            breakpoint: null
+        }
+    },
+    
+    template: `
+    <div>
+        <h3>Breakpoint at {{breakpoint.chr}}:{{breakpoint.start}}</h3>
+        <svg ref='svg' style='height: 300px; width: 1280px'></svg>
+    </div>
+    `
+})
+
+/************************ Breakpoint Table **********************************/
+
 var BP_TYPES = ['noise','deletion','insertion','microduplication',
     'duplication','inversion','complex sv','sv','contamination',
     'adapter','gcextreme',
@@ -175,16 +588,9 @@ var GENES_COLUMN = TABLE_COLUMNS.findIndex(function(col) {
     return col.title == 'Genes';
 });
 
+
 Vue.component('BreakpointsView', {
     
-//  constructor(props) {
-////      super(props);
-//      
-//      var breakpoints = props.breakpoints;
-//      this.state = {breakpoints: breakpoints, breakpointCount: 0, loaded: false};
-//      this.displayOverview = this.displayOverview.bind(this);
-//  }
-   
   created: function() {
       
       console.log("Created breakpoints view");
@@ -214,7 +620,7 @@ Vue.component('BreakpointsView', {
                 
                 this.breakpointTable = $('#breakpoint-table').DataTable( {
                     data: this.breakpoints,
-//                    createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
+                    createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
                     columns: TABLE_COLUMNS,
                     pageLength: 15
                 } );
@@ -243,6 +649,8 @@ Vue.component('BreakpointsView', {
      * Adorn a row in the table with extra features
      */
   createBreakpointRow : function(row, data, dataIndex ) {
+      
+      console.log("Row created")
         
       /*
         var tds = row.getElementsByTagName('td');
@@ -280,15 +688,52 @@ Vue.component('BreakpointsView', {
         */
     },
 
-    highlightRow: function(tr) {
-        console.log('adding highlight to ' + tr);
-        if(this.highlightedRow)
-            $(this.highlightedRow).removeClass('highlight');
-        $(tr).addClass('highlight');
-        this.highlightedRow = tr;
-    },
-    
     methods: { 
+        createBreakpointRow : function(row, data, dataIndex ) {
+          console.log("Row created")
+          $(row).click((evt) => {
+              this.highlightRow(row, dataIndex)
+              
+            // Only open the detail if the user was NOT clicking on a link
+              if(evt.target.tagName != 'A') {
+                  
+                let bp = this.breakpoints[dataIndex]
+                let componentId = 'breakpoint_'+ bp.chr+'_'+ bp.start
+                if(components[componentId]) {
+                    // Show the existing breakpoint tab
+                    let existingComponent = components[componentId]
+                    let diagramStack = window.layout.root.contentItems[0].contentItems[1]
+                    let childElement = diagramStack.contentItems.find(child => child.container == existingComponent.container)
+                    if(childElement != null) {
+                        diagramStack.setActiveContentItem(childElement)
+                    }
+                    else {
+                        alert('Cannot find window for breakpoint!')
+                    }
+                }
+                else {
+                    let contentWindow = { // Lower row - command results
+                            type: 'component',
+                            title: 'Breakpoint Detail',
+                            componentName: 'BreakpointDiagram',
+                            componentState: { id: componentId, breakpoint: bp }, 
+                    }
+                    addLowerTab(contentWindow) 
+                }
+            }
+              
+          })
+        },
+        
+        highlightRow: function(tr, dataIndex) {
+            console.log('adding highlight to ' + tr);
+            if(this.highlightedRow)
+                $(this.highlightedRow).removeClass('highlight');
+            $(tr).addClass('highlight');
+            this.highlightedRow = tr;
+            
+        },
+        
         
         filterBreakpoint: function(excluded_samples, distThreshold, bp) {
                 if((bp.depth <= this.obs_filter_threshold) || (bp.sample_count > this.sample_count_filter_threshold))
@@ -304,9 +749,6 @@ Vue.component('BreakpointsView', {
                 }))
                     return false
                 
-//                if((excluded_samples.indexOf(bp.sample) >= 0) ||  excluded_samples.some( s => bp.samples.indexOf(s)>=0))
-//                    return false;
-                    
                 return ((distThreshold === false) || (bp.cdsdist &&  bp.cdsdist.some(d => (d >= 0) && (d <= distThreshold))));
         },
         
