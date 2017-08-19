@@ -147,22 +147,28 @@ class FindNovelBreakpoints extends DefaultActor {
 //            verbose = true
 //        }
 //        
-        Long bpId = XPos.computePos(msg.chr, msg.pos)
-        BreakpointInfo bpInfo = new BreakpointInfo(id: bpId, chr: msg.chr, pos: msg.pos, sampleCount: freq)
-
-        // Check if any other breakpoint ties to this one
-        bpInfo.add(msg)
-        breakpoints.add(bpInfo)
-        
-        // Index this breakpoint
-        if(reference) {
-            String reference = bpInfo.queryReference(reference, softClipSize)
-            for(int i=0; i<partnerIndexBases; ++i) {
-                String indexKey = reference.substring(i, i+indexLength)
-                if(verbose)
-                    log.info "Adding indexed ref seq " + indexKey
-                breakpointPartners[indexKey] = bpInfo
+        try {
+            Long bpId = XPos.computePos(msg.chr, msg.pos)
+            
+            BreakpointInfo bpInfo = new BreakpointInfo(id: bpId, chr: msg.chr, pos: msg.pos, sampleCount: freq)
+    
+            // Check if any other breakpoint ties to this one
+            bpInfo.add(msg)
+            breakpoints.add(bpInfo)
+            
+            // Index this breakpoint
+            if(reference) {
+                String reference = bpInfo.queryReference(reference, softClipSize)
+                for(int i=0; i<partnerIndexBases; ++i) {
+                    String indexKey = reference.substring(i, i+indexLength)
+                    if(verbose)
+                        log.info "Adding indexed ref seq " + indexKey
+                    breakpointPartners[indexKey] = bpInfo
+                }
             }
+        }
+        catch(Exception e) {
+            log.warning "Failed to add breakpoint at $msg.chr:$msg.pos: " + e
         }
     }
     
