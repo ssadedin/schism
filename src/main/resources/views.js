@@ -115,23 +115,26 @@ Vue.component('BreakpointDiagram',{
            // Mark 10 positions along the frame
            let tickRange = [domains[0],domains[domains.length-1]]
            let tickWidth = tickRange[1] - tickRange[0]
+           console.log("Tick width = " + tickWidth)
             
-           let tickGaps = [10,50,100,200,500,1000,5000,10000,20000,50000,100000,200000,500000]
+           let tickGaps = [10,50,100,200,500,1000,5000,10000,20000,50000,100000,200000,500000].reverse()
             
-           let tickGapIndex = _.findIndex(tickGaps.reverse(),gap => 10 * gap < tickWidth)
+           let tickGapIndex = _.findIndex(tickGaps, gap => 10 * gap < tickWidth)
            if(tickGapIndex < 0) {
                console.log("WARNING: unable to find a good tick interval for labeling genome graph")
                return
            }
             
-           let tickGap = tickGaps.reverse()[tickGapIndex]
+           let tickGap = tickGaps[tickGapIndex]
            
            // Round the minimum to the same resolution as the tick gap interval
            let tickMin = Math.floor(domains[0] / tickGap) * tickGap
+           let tickMax = tickRange[1] - tickGap
            
+           console.log("Tick gap index = " + tickGapIndex + " tick width = " + tickGap + " tick min = " + tickMin)
            let tickIndices = []
            let i = 0
-           while((i*tickGap) < (tickRange[1]-tickGap)) {
+           while(tickMin + (i*tickGap) < tickMax) {
                tickIndices.push(i++)
            }
            
