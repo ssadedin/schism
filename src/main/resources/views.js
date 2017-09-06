@@ -52,6 +52,7 @@ Vue.component('BreakpointDiagram',{
             labelFontSize: 9, // Font size in px
             xScale : null, // populated later
             geneGap : 30,
+            geneY: 100,
             geneColors: ['#3a3','#5c5'],
             breakpointHeight: 20,
             genomePadding: 100 // Bases upstream / downstream to display
@@ -85,12 +86,27 @@ Vue.component('BreakpointDiagram',{
         window.svg = svg;
         window.xScale = plotLayout.xScale;
         
+        this.drawMidline(plotLayout, svg)
         this.drawGenes(plotLayout, svg, genes)
         this.drawBreakpoints(plotLayout, svg, [bp])
         this.drawFrame(plotLayout, svg)
     },
     
     methods: {
+        
+        drawMidline: function(plotLayout, svg) {
+            
+            let frameHeight = 150
+            let frameBaselineY = plotLayout.baselineY-35 
+            let midlineY = plotLayout.geneY
+            
+            svg.append('line')
+               .attr('x1', 2)
+               .attr('y1', midlineY)
+               .attr('x2', plotLayout.width)
+               .attr('y2', midlineY)
+               .attr('class', 'breakpointFrame')
+        },
         
         drawFrame: function(plotLayout, svg) {
             
@@ -272,7 +288,7 @@ Vue.component('BreakpointDiagram',{
                 
             let allExons = [].concat.apply([],genes.map(g => g.exons))
             
-            let geneY = 100
+            let geneY = plotLayout.geneY
             let exonHeight = 15
             
             // debug
