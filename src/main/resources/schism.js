@@ -77,6 +77,7 @@ var config = {
     content: [
         {
             type: 'column',
+            isClosable: false,
             content: [ 
                 {   
                     type: 'row', // Top row - BreakpointsView
