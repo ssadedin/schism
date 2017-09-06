@@ -154,6 +154,7 @@ $(document).ready(function() {
     
     window.model = {
         breakpoints : new Breakpoints({dataFiles: breakpoint_srcs}),
+        defaultBamFilePrefix : null,
         genes: []
     }
     

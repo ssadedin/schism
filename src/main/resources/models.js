@@ -28,6 +28,9 @@ class Breakpoints {
             Object.assign(this.genes, window.genes); // loaded as a side effect of loading breakpoints
                                  // may break if > 1 breakpoints loaded
             
+            if(window.defaultBamFilePrefix && components.BreakpointsView)
+                components.BreakpointsView.bamFilePrefix = defaultBamFilePrefix;
+            
             bps.forEach( (bp,i) => bp.index = i)
             this.breakpoints = bps;
             $(this).trigger('breakpoints:change');

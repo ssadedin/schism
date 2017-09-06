@@ -443,8 +443,11 @@ function igv_url_for_sample(sample) {
     var base='http://localhost:60151/';
     if(window.bamFiles && bamFiles[sample]) {
         let breakpointPath = bamFiles[sample]
-        if(components.BreakpointsView.bamFilePrefix) {
-            breakpointPath = components.BreakpointsView.bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
+        
+        let bamFilePrefix = components.BreakpointsView.bamFilePrefix || defaultBamFilePrefix
+        
+        if(bamFilePrefix) {
+            breakpointPath = bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
         }
         return base + 'load?file='+encodeURIComponent(breakpointPath)+ '&';
     }
@@ -462,8 +465,9 @@ function go_igv(breakpointIndex, start /* optional */, end /* optional */) {
     var bp = model.breakpoints.breakpoints[breakpointIndex];
     if(window.bamFiles && bamFiles[bp.sample]) {
         let breakpointPath = bamFiles[bp.sample]
-        if(components.BreakpointsView.bamFilePrefix) {
-            breakpointPath = components.BreakpointsView.bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
+        let bamFilePrefix = components.BreakpointsView.bamFilePrefix || defaultBamFilePrefix
+        if(bamFilePrefix) {
+            breakpointPath = bamFilePrefix + '/' + breakpointPath.replace(/^.*\//, '')
         }
         base += 'load?file='+encodeURIComponent(breakpointPath)+ '&';
     }
@@ -802,7 +806,7 @@ Vue.component('BreakpointsView', {
           sample_count_filter_threshold: 10,
           breakpointTable: null,
           exclude_sample: '',
-          bamFilePrefix: null,
+          bamFilePrefix: model.defaultBamFilePrefix || '',
           gene_proximity: "none",
           DIST_CLASS_DESC: DIST_CLASS_DESC
       }
