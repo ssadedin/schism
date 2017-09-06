@@ -330,9 +330,14 @@ Vue.component('BreakpointDiagram',{
         computeScales: function(bp, genes, plotLayout) {
             let sum = (x) => x.reduce((acc,n) => acc+n, 0)
             
+            
             // Find the minimum of the exons and the bp
-            let minPos = Math.min(bp.start, genes[0].start)
-            let maxPos = Math.max(bp.start, genes[genes.length-1].end)
+            let minPos = bp.start - 500
+            let maxPos = bp.start + 500
+            if(genes.length > 0) {
+                minPos = Math.min(bp.start, genes[0].start)
+                maxPos = Math.max(bp.start, genes[genes.length-1].end)
+            }
             
             let width = plotLayout.width - plotLayout.xPadding 
             
