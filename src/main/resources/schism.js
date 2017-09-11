@@ -148,15 +148,65 @@ function registerVueComponent(componentName) {
     })
 }
 
+function getBreakpointView() {
+    return components.BreakpointsView
+}
 
+
+BREAKPOINT_LIST_SHORTCUT_KEYS = {
+        84: function() {
+           let bpView = getBreakpointView()
+           if(bpView.highlightedRow) {
+               let bp = bpView.highlightedBp
+               console.log('Tagging breakpoint: ' + bp.chr + ':' + bp.start )
+               bpView.addTag()
+           }
+        },
+        
+        70: function() {
+           getBreakpointView().greyBp()
+        }
+}
+
+SHORTCUT_KEYS = [BREAKPOINT_LIST_SHORTCUT_KEYS]
+
+function noKeys() {
+    SHORTCUT_KEYS.push({})
+}
+
+function popKeys() {
+    SHORTCUT_KEYS.pop({})
+}
+
+function keyHandler(e) {
+    console.log('key: ' + e.keyCode)
+    if(_.last(SHORTCUT_KEYS)[e.keyCode]) {
+        _.last(SHORTCUT_KEYS)[e.keyCode]()
+    }
+}
 
 $(document).ready(function() {
     
     window.model = {
         breakpoints : new Breakpoints({dataFiles: breakpoint_srcs}),
         defaultBamFilePrefix : null,
-        genes: []
+        genes: [],
+        id: location.host + ':' + location.pathname,
+        tags: {},
+        greyed: {},
+        save: function() {
+            console.log('Saving to: ' + 'schism-'+model.id)
+            store.set('schism-'+model.id, {
+                tags: window.model.tags,
+                greyed: window.model.greyed
+            })
+        },
+        load: function() {
+            Object.assign(window.model, store.get('schism-'+model.id) || {})
+        }
     }
+    
+    model.load()
     
     model.breakpoints.load()
     
@@ -172,6 +222,9 @@ $(document).ready(function() {
     $('#content').height($(window).height() - footerHeight - 18 - $('#header').outerHeight())
     
     layout.init()
+    
+    $(document.body).keyup(keyHandler);
+    
     console.log("Layout initialized");
     
 })

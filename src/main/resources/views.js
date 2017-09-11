@@ -537,6 +537,18 @@ function compute_dist_class(cds_dist) {
 }
 
 var TABLE_COLUMNS = [
+   { 
+       title: 'Tags', data: 'start', render: function(data,type,row) {
+           let bpId = row.chr + ':' + row.start
+           let tags = model.tags;
+           if(tags[bpId]) {
+               let value = `<span class=tags>${tags[bpId]}</span>`;
+               return value;
+           }
+           else
+               return '';
+       }
+   },
    { title: 'Position', data: 'start', render: function(data,type,row) {
        var sizeInfo = '';
        var partnerInfo = ''
@@ -549,7 +561,6 @@ var TABLE_COLUMNS = [
 
            if(chr == partnerChr)  {
                var partnerPos = parseInt(partnerChrSplit[1],10);
-               console.log('partnerPos = ' + partnerPos);
                var eventSize = Math.abs(partnerPos-pos);
                if(eventSize > 1000) {
                    sizeInfo = ' <span class=largeEvent>(' + 
@@ -616,6 +627,15 @@ var GENES_COLUMN = TABLE_COLUMNS.findIndex(function(col) {
     return col.title == 'Genes';
 });
 
+Vue.component('BreakpointTagDialog', {
+    data: function() {
+        return {
+            show: false
+        }
+    }
+})
+
+
 
 Vue.component('BreakpointsView', {
     
@@ -624,6 +644,7 @@ Vue.component('BreakpointsView', {
       console.log("Created breakpoints view");
       
       this.highlightedRow = null;
+      this.highlightedBp = null;
       
       var that = this;
       var breakpoints = model.breakpoints;
@@ -650,7 +671,8 @@ Vue.component('BreakpointsView', {
                     data: this.breakpoints,
                     createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
                     columns: TABLE_COLUMNS,
-                    pageLength: 15
+                    pageLength: 15,
+                    order: [ [1, 'asc'], [2, 'asc'] ]
                 } );
                 
                 $('#breakpoint-table').css('width','100%')
@@ -676,56 +698,125 @@ Vue.component('BreakpointsView', {
      /**
      * Adorn a row in the table with extra features
      */
-  createBreakpointRow : function(row, data, dataIndex ) {
-      
-      console.log("Row created")
-        
-      /*
-        var tds = row.getElementsByTagName('td');
-        var me = this;
-        $(tds[IGV_COLUMN]).find('a').click(function(e) { e.stopPropagation(); me.highlightRow(row); });
-        $(tds[GENES_COLUMN]).find('a').click(function(e) { e.stopPropagation(); me.highlightRow(row); });
-
-        var typeTd = $(tds[TYPE_COLUMN]);
-        var breakpoint_id = data[DATA_COLUMNS.xpos];
-        var individual_id = data[DATA_COLUMNS.Individual]
-        typeTd.click(function() {
-            if(typeTd.hasClass('editingType')) {
-
-            }
-            else {
-                me.highlightRow(row);
-                var sel = typeTd.html('<select id=' + breakpoint_id + '_type ' + '><option>Select</option>' + 
-                    BP_TYPES.map(function(bp_type) { return '<option value="'+bp_type +'">' + bp_type + '</option>'}).join('\n')
-                )
-                typeTd.addClass('editingType');
-                typeTd.find('select').change(function() {
-                    var bpType = this.options[this.selectedIndex].value;
-                    data[TYPE_COLUMN] = bpType;
-                    breakpoints.get('metadatas')[data[DATA_COLUMNS.xpos]] = bpType;
-                    typeTd.html(bpType);
-                    typeTd.removeClass('editingType');
-                    $.post('../../breakpoint/' + breakpoint_id, { 'indiv_id' : individual_id, 'type' : bpType }, function(result) {
-                        console.log('Breakpoint updated');
+      createBreakpointRow : function(row, data, dataIndex ) {
+          
+          /*
+            var tds = row.getElementsByTagName('td');
+            var me = this;
+            $(tds[IGV_COLUMN]).find('a').click(function(e) { e.stopPropagation(); me.highlightRow(row); });
+            $(tds[GENES_COLUMN]).find('a').click(function(e) { e.stopPropagation(); me.highlightRow(row); });
+    
+            var typeTd = $(tds[TYPE_COLUMN]);
+            var breakpoint_id = data[DATA_COLUMNS.xpos];
+            var individual_id = data[DATA_COLUMNS.Individual]
+            typeTd.click(function() {
+                if(typeTd.hasClass('editingType')) {
+    
+                }
+                else {
+                    me.highlightRow(row);
+                    var sel = typeTd.html('<select id=' + breakpoint_id + '_type ' + '><option>Select</option>' + 
+                        BP_TYPES.map(function(bp_type) { return '<option value="'+bp_type +'">' + bp_type + '</option>'}).join('\n')
+                    )
+                    typeTd.addClass('editingType');
+                    typeTd.find('select').change(function() {
+                        var bpType = this.options[this.selectedIndex].value;
+                        data[TYPE_COLUMN] = bpType;
+                        breakpoints.get('metadatas')[data[DATA_COLUMNS.xpos]] = bpType;
+                        typeTd.html(bpType);
+                        typeTd.removeClass('editingType');
+                        $.post('../../breakpoint/' + breakpoint_id, { 'indiv_id' : individual_id, 'type' : bpType }, function(result) {
+                            console.log('Breakpoint updated');
+                        });
                     });
-                });
-
-                console.log('Created select: ' + sel)
-            }
-        })
-        */
-    },
+    
+                    console.log('Created select: ' + sel)
+                }
+            })
+            */
+        },
 
     methods: { 
-        createBreakpointRow : function(row, data, dataIndex ) {
+        
+        addTag: function() {
+            let tags = model.tags
+            let bpId = this.highlightedBp.chr + ':' + this.highlightedBp.start
+            console.log("Save bp id " + bpId)
+            this.$modal.show('tag-modal', {
+                width: 300,
+                height: 100
+            })
+            setTimeout(() => {
+                if(tags[bpId])
+                    this.$refs.tagToAddInput.value = tags[bpId]
+                else
+                    this.$refs.tagToAddInput.value = '';
+                this.$refs.tagToAddInput.focus()
+            }, 10)
+        },
+        
+        noKeys: function() {
+            console.log("NO KEYS")
+            noKeys()
+        },
+        popKeys: function() {
+            console.log("KEYS be back!")
+            popKeys()
+        },
+        saveTag: function() {
+            console.log('Saving tag');
+            
+            let bpId = this.highlightedBp.chr + ':' + this.highlightedBp.start
+            model.tags[bpId] = this.$refs.tagToAddInput.value
+            model.save()
+            this.$modal.hide('tag-modal')
+            this.highlightedRow.getElementsByTagName('td')[0].innerHTML = 
+                TABLE_COLUMNS[0].render(null, null, this.highlightedBp)
+        },
+        
+        cancelSaveTag: function() {
+            this.$modal.hide('tag-modal')
+        },
+        
+        onTagKey: function(e) {
+            window.e = e;
+            console.log(e)
+            if(e.code == "Enter") {
+                this.saveTag()
+                this.highlightRow
+            }
+        },
+        
+        greyBp : function() {
+            console.log('GREY')
+            let bpId = this.highlightedBp.chr + ':' + this.highlightedBp.start
+            model.greyed[bpId] = model.greyed[bpId] ? false : true
+            model.save()
+            
+            if(model.greyed[bpId])
+                $(this.highlightedRow).addClass('greyed')
+            else
+                $(this.highlightedRow).removeClass('greyed')
+        },
+        
+        createBreakpointRow : function(tr, data, dataIndex ) {
           console.log("Row created")
-          $(row).click((evt) => {
-              this.highlightRow(row, dataIndex)
+          
+          let bp = this.breakpoints[dataIndex]
+          let bpId = bp.chr + ':' + bp.start
+          if(model.greyed[bpId]) {
+              console.log(`${bpId} is greyed!`)
+              $(tr).addClass('greyed')
+          }
+          
+         
+          $(tr).click((evt) => {
+              
+              this.highlightRow(bp, tr, dataIndex)
               
             // Only open the detail if the user was NOT clicking on a link
               if(evt.target.tagName != 'A') {
                   
-                let bp = this.breakpoints[dataIndex]
                 let componentId = 'breakpoint_'+ bp.chr+'_'+ bp.start
                 if(components[componentId]) {
                     // Show the existing breakpoint tab
@@ -734,34 +825,31 @@ Vue.component('BreakpointsView', {
                     let childElement = diagramStack.contentItems.find(child => child.container == existingComponent.container)
                     if(childElement != null) {
                         diagramStack.setActiveContentItem(childElement)
-                    }
-                    else {
-                        alert('Cannot find window for breakpoint!')
+                        return
                     }
                 }
-                else {
-                    let contentWindow = { // Lower row - command results
-                            type: 'component',
-                            title: 'Breakpoint Detail',
-                            componentName: 'BreakpointDiagram',
-                            componentState: { id: componentId, breakpoint: bp }, 
-                    }
-                    addLowerTab(contentWindow) 
+                
+                // Did not successfully locate the existing window: make a new one
+                let contentWindow = { // Lower row - command results
+                        type: 'component',
+                        title: 'Breakpoint Detail',
+                        componentName: 'BreakpointDiagram',
+                        componentState: { id: componentId, breakpoint: bp }, 
                 }
+                addLowerTab(contentWindow) 
             }
               
           })
         },
         
-        highlightRow: function(tr, dataIndex) {
+        highlightRow: function(bp, tr, dataIndex) {
             console.log('adding highlight to ' + tr);
             if(this.highlightedRow)
                 $(this.highlightedRow).removeClass('highlight');
             $(tr).addClass('highlight');
             this.highlightedRow = tr;
-            
+            this.highlightedBp = bp;
         },
-        
         
         filterBreakpoint: function(excluded_samples, distThreshold, bp) {
                 if((bp.depth <= this.obs_filter_threshold) || (bp.sample_count > this.sample_count_filter_threshold))
@@ -821,6 +909,7 @@ Vue.component('BreakpointsView', {
       return {
           breakpoints: model.breakpoints,
           highlightedRow: null,
+          highlightedBp: null,
           obs_filter_levels: [1,2,3,4,5,6,7,8,9,10,15,20,30,50],
           sample_count_filter_levels: [1,2,3,4,5,6,7,8,9,10,15,20,30,50],
           obs_filter_threshold: 3,
@@ -829,12 +918,13 @@ Vue.component('BreakpointsView', {
           exclude_sample: '',
           bamFilePrefix: model.defaultBamFilePrefix || '',
           gene_proximity: "none",
-          DIST_CLASS_DESC: DIST_CLASS_DESC
+          DIST_CLASS_DESC: DIST_CLASS_DESC,
+          tagToAdd: null
       }
   },
   
   template: `
-      <div class='content_panel_wrapper'>
+      <div class='content_panel_wrapper' >
         <div class="container">
             <div id="form-container">
             
@@ -874,6 +964,17 @@ Vue.component('BreakpointsView', {
                     
                 </modal>
                 
+                <modal name='tag-modal' :width='330' :height=140 @opened='noKeys' @closed='popKeys'>
+                    <div class=content_panel_wrapper>
+                        <h2>Tag</h2>
+                        <label class=smallLeft>Tag to apply: </label>
+                        <div class=smallRightFill><input type='text' ref='tagToAddInput' v-model='tagToAdd' v-on:keypress='onTagKey'></div>
+                        <div class='dialogButtons'>
+                            <button v-on:click='cancelSaveTag()'>Cancel</button>
+                            <button v-on:click='saveTag()'>Save</button>
+                        </div>
+                    </div>
+                </modal> 
             </div>
         </div>
         

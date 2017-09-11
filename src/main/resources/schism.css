@@ -129,6 +129,20 @@ span.configure {
     top: -2px;
 }
 
+.smallLeft {
+ float: left;
+ width: 6em;
+ display: block;
+ text-align: right;
+}
+
+.smallRightFill {
+  margin-left: 8em;
+  display: block;
+  padding-left: 1em;
+}
+
+
 input.wide {
     width: 20em;
 }
@@ -154,7 +168,7 @@ path.partnerArrows {
  fill: #f77;
 }
 
-rect.breakpointFrame {
+line.breakpointFrame, rect.breakpointFrame {
     stroke: #000;
     stroke-width: 1px;
     fill: none;
@@ -173,3 +187,44 @@ text.tickLabel {
 text.tickChromosomeLabel {
     font-size: 15px;
 }
+
+.dialogButtons {
+    padding: 0.5em 0;
+    text-align: right;
+}
+
+.dialogButtons button {
+    margin: 0.5em 0;
+}
+
+.tags {
+    background-color: #33aa33;
+    border-radius: 5px;
+    color: white;
+    display: inline;
+    padding: 3px 5px;
+    font-size: 83%;
+    margin: 3px;
+}
+
+.tag0 {
+    background-color: #33aa33;
+}
+
+.tag1 {
+    background-color: #3333ff;
+}
+
+.tag2 {
+    background-color: #aa33aa;
+}
+
+.tag3 {
+    background-color: #ff6600;
+}
+
+table tr.greyed {
+ color: #bbb;
+ font-style: italic;
+}
+
