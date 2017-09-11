@@ -19,6 +19,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 
 import groovy.transform.CompileStatic
@@ -65,6 +66,7 @@ class BreakpointDatabaseSet {
         this.databases = determineDatabaseRanges(dbs, bam)
     }
     
+    @CompileStatic
     Regions determineDatabaseRanges(List<Sql> databases, SAM bam) {
         
         this.chrPrefix = bam.contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
@@ -72,9 +74,12 @@ class BreakpointDatabaseSet {
         Regions dbRegions = new Regions()
         def contigs = bam.getContigs()
         for(Sql db in databases) {
-            def minmax = db.firstRow("select min(id) as min_bp, max(id) as max_bp from breakpoint;")
-            Region minRegion = XPos.parsePos(minmax.min_bp)
-            Region maxRegion = XPos.parsePos(minmax.max_bp)
+            GroovyRowResult minmax = null
+            synchronized(db) { 
+                minmax = db.firstRow("select min(id) as min_bp, max(id) as max_bp from breakpoint;")
+            }
+            Region minRegion = XPos.parsePos((long)minmax.min_bp)
+            Region maxRegion = XPos.parsePos((long)minmax.max_bp)
             
             log.info "Database $db spans $minRegion - $maxRegion"
             
@@ -122,7 +127,11 @@ class BreakpointDatabaseSet {
             warnedAboutNoOverlap = true
         }
             
-        return dbs.collect(c)
+        return dbs.collect { db ->
+            synchronized(db) {
+                c(db)
+            }
+        }
     }
     
     
@@ -151,27 +160,29 @@ class BreakpointDatabaseSet {
     @CompileStatic
     int getDbBreakpointFrequency(Sql db, String chr, int pos) {
         long breakpointId = XPos.computePos(chr, pos)
-        def dbBreakpoint = db.firstRow("select sample_count from breakpoint where id = $breakpointId")        
-        if(dbBreakpoint == null)
-            return 0
-        else {
-            def excludeResult
-            if(excludeSamples) {
-                db.firstRow("""
-                    select count(1) as exclude_count from breakpoint_observation 
-                    where id = $breakpointId 
-                    and sample in (""" + "${excludeSamples.join("','")})" + """
-                """)
-            }
+        synchronized(db) {
+            def dbBreakpoint = db.firstRow("select sample_count from breakpoint where id = $breakpointId")        
+            if(dbBreakpoint == null)
+                return 0
             else {
-                excludeResult = db.firstRow("""
-                   select count(1) as exclude_count from breakpoint_observation where id = $breakpointId and sample=$sample
-                """)        
+                def excludeResult
+                if(excludeSamples) {
+                    db.firstRow("""
+                        select count(1) as exclude_count from breakpoint_observation 
+                        where id = $breakpointId 
+                        and sample in (""" + "${excludeSamples.join("','")})" + """
+                    """)
+                }
+                else {
+                    excludeResult = db.firstRow("""
+                       select count(1) as exclude_count from breakpoint_observation where id = $breakpointId and sample=$sample
+                    """)        
+                }
+                
+                int excludeCount = excludeResult ? (int)excludeResult.exclude_count : 0
+                
+                return ((int)dbBreakpoint.sample_count) - excludeCount
             }
-            
-            int excludeCount = excludeResult ? (int)excludeResult.exclude_count : 0
-            
-            return ((int)dbBreakpoint.sample_count) - excludeCount
         }
     }
     
