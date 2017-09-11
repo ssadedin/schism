@@ -129,7 +129,17 @@ class BreakpointReadFilter {
         
         // When both reads in pair are aligned to nearly the same position then we 
         // have a possibility of small fragment containing adapter contamination
-        if(Math.abs(read.mateAlignmentStart - read.alignmentStart) < 10) {
+        int alignmentGap = Math.min(
+            Math.abs(read.mateAlignmentStart - read.alignmentStart),
+            Math.abs(read.mateAlignmentStart - read.alignmentEnd)
+        )
+        
+        if(debugRead != null && read.readName == debugRead) {
+            "Debug read: " + debugRead + ": alignmentGap = " + alignmentGap + read.readString
+        }
+        
+        if(alignmentGap< 10) {
+            
             if(read.readString.indexOf(ADAPTER_SEED) >=0 || (read.readString.indexOf(ADAPTER_SEED_COMPLEMENT)>=0)) {
                 return true
             }
