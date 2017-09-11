@@ -61,7 +61,7 @@ class BreakpointReadFilter {
     // ----------  Parameters controlling filtering
     int minSoftClippedBases = 20
     int maxInsertSize = 100000
-    int minNonScBases = 21
+    int minNonScBases = 22
     
     /**
      * Optional log file to write log of action to (for debugging)
