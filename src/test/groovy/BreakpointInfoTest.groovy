@@ -44,4 +44,38 @@ class BreakpointInfoTest {
         assert bpInfo1.observations.size() == 2
         assert bpInfo1.obs == 11
     }
+    
+    @Test
+    void testReferenceSequence() {
+        
+        Long bpId = XPos.computePos('X', 200)
+        
+        BreakpointSampleInfo sampleInfo1 = new BreakpointSampleInfo()
+        sampleInfo1.with {
+            direction = SoftClipDirection.FORWARD
+            startClips = 4
+            obs = 4
+        }
+        
+        BreakpointInfo bpInfo1 = new BreakpointInfo(
+            id: bpId,
+            chr: 'X',
+            pos: 100,
+            obs: 4,
+            sampleCount: 1,
+            observations: [sampleInfo1]
+        )
+        
+        FASTA fasta = [
+            basesAt: { String chr, long start, long end ->
+                "AAAAAAAATTTTTTTT"
+            }
+        ] as FASTA
+        
+        def (opp, over) = bpInfo1.queryReference(fasta, 8)
+        assert opp == "TTTTTTTT"
+        assert over == "AAAAAAAA"
+
+        
+    }
 }

@@ -106,13 +106,29 @@ class BreakpointInfo {
     }
   
     
-    String queryReference(FASTA reference, int numBases) {
+    /**
+     * Returns the reference sequence before and after a breakpoint.
+     * 
+     * @param reference
+     * @param numBases
+     * @return  a two element string array. The first element is the reference sequence 
+     *          on the opposite side of the soft clips that support the breakpoint. 
+     *          The second element is the reference sequence on the same side as the 
+     *          soft clips that support the breakpoint.
+     */
+    @CompileStatic
+    String [] queryReference(FASTA reference, int numBases) {
+        String bases = reference.basesAt(chr, pos-numBases, pos+numBases)
+        String [] result = new String[2]
         if(observations.any { it.startClips > 0 }) {
-            reference.basesAt(chr, pos, pos+numBases)
+            result[1] = bases.substring(0,numBases)
+            result[0] = bases.substring(numBases)
         }
         else {
-            reference.basesAt(chr,pos-numBases,pos)
+            result[0] = bases.substring(0,numBases)
+            result[1] = bases.substring(numBases)
         }
+        return result
     }
     
     @Override

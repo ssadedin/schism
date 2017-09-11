@@ -175,7 +175,7 @@ class WriteBreakpointDBActor extends DefaultActor {
         
         String ref = null
         if(reference) {
-            ref = bp.queryReference(reference, softClipSize)
+            ref = bp.queryReference(reference, softClipSize)[0]
         }
         
         db.execute """
