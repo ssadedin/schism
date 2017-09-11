@@ -51,7 +51,9 @@ class BreakpointDatabaseSet {
         
         log.info "Opening databases ..."
         List<Sql> dbs = dbFiles.collect {  dbFile ->
-            Sql db = Sql.newInstance("jdbc:sqlite:${dbFile}")
+            Properties props = new Properties()
+            props.setProperty("open_mode", "1"); 
+            Sql db = Sql.newInstance("jdbc:sqlite:${dbFile}", props)
             db.cacheConnection = true
             db.cacheStatements = true
             db
