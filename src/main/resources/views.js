@@ -33,7 +33,8 @@ Vue.component('BreakpointDiagram',{
                                     index: i,
                                     start: g.exons[0].from,
                                     end: g.exons[g.exons.length-1].to,
-                                    exons: g.exons
+                                    exons: g.exons,
+                                    strand: g.strand
                                 }
                             })
                             
@@ -292,7 +293,7 @@ Vue.component('BreakpointDiagram',{
             let exonHeight = 15
             
             // debug
-            window.genes = genes;
+            // window.genes = genes;
             window.exons = allExons;
 
             let geneColors = plotLayout.geneColors
@@ -314,6 +315,29 @@ Vue.component('BreakpointDiagram',{
                    .attr('style', (g,i) => `stroke:${geneColors[i%2]};stroke-width:1;fill:${geneColors[i%2]};`)
                    .attr('rx',2)
                    .attr('ry',2)
+                   
+                   
+            genes.forEach(gene => {
+                if(gene.strand != null) {
+                    let strandSymbol = (gene.strand == '+') ? "▶" : "◀"
+                    
+                    console.log('gene strand for ' + gene.gene)
+                    
+                    // Put a right facing arrow in between each exon
+                    svg.selectAll(gene.gene+'.geneArrows')
+                       .data(gene.exons.slice(0,-1))
+                       .enter()
+                       .append('text')
+                          .attr('x',(exon,i) => { return (xScale(exon.to) + xScale(gene.exons[i+1].from))/2 - 6 })
+                          .attr('y',(exon,i) => geneY+4)
+                          .attr('class','geneStrandArrow')
+                          .attr('style',(e,i) => { 
+                               let color=geneColors[e.gene.index%geneColors.length]; 
+                               return `stroke:${color};stroke-width:1;fill:${color};`
+                          }) 
+                          .text(exon => strandSymbol)
+                }
+            })
                    
             let geneLabels = Object.values(_.groupBy(genes, g => Math.round((g.start + g.end / 2)/10)))
             
@@ -594,13 +618,12 @@ var TABLE_COLUMNS = [
                let cds_dist = row.cdsdist[i];
                let distClass = compute_dist_class(cds_dist);
                var geneLists = '';
-               /*
-               if(GENE_LISTS[g.gene]) {
-                   geneLists = GENE_LISTS[g.gene].map(function(gl) {
-                       return '(<span class=geneListTag>' + gl + '</span>)'
+               if(model.geneList[g]) {
+                   console.log('gene ' + g + ' has gene list')
+                   geneLists = model.geneList[g].lists.map(function(gl) {
+                       return '<span class=geneListTag>' + gl + '</span>'
                    }).join(' ');
                }
-               */
                return '<a href="' + url + '" target=genecards class=genedist'+distClass+'>' + g + '</a> ' + geneLists;
            }).join(", ");
        }
@@ -652,6 +675,7 @@ Vue.component('BreakpointsView', {
         console.log("Updated breakpoints: " + model.breakpoints.breakpoints.length);
         this.filterSamples(this)
       })
+      this.geneList = Object.values(model.geneList).map(gl => gl.gene).join(',')
   },
   
   watch: {
@@ -901,6 +925,10 @@ Vue.component('BreakpointsView', {
         configure: function() {
             this.$modal.show('configuration-modal')
             setTimeout(() => this.$refs.bamFilePrefixInput.focus(), 10)
+        },
+        configClose: function() {
+            model.geneList = _.indexBy(this.geneList.split(',').map(x => { return { gene: x.trim(), lists: ['Priority'] }}), x => x.gene )
+            model.save()
         }
     },
   
@@ -918,6 +946,7 @@ Vue.component('BreakpointsView', {
           exclude_sample: '',
           bamFilePrefix: model.defaultBamFilePrefix || '',
           gene_proximity: "none",
+          geneList: '',
           DIST_CLASS_DESC: DIST_CLASS_DESC,
           tagToAdd: null
       }
@@ -955,11 +984,13 @@ Vue.component('BreakpointsView', {
                 
                 <a href='#' v-on:click.prevent='configure'><span class='configure'>&#x2699;</span></a>
                 
-                <modal name='configuration-modal'>
+                <modal name='configuration-modal' @closed='configClose'>
                     <div class=content_panel_wrapper>
                         <h2>Configuration</h2>
                         <label class='left'>Prefix for Accessing BAM Files: </label>
                         <div class='rightFill'><input type='text' ref='bamFilePrefixInput' v-model='bamFilePrefix'></div>
+                        <label class='left'>Gene List:</label>
+                        <div class='rightFill'><textarea ref='geneListTextArea' v-model='geneList' rows=5 cols=40></textarea></div>
                     </div>
                     
                 </modal>

@@ -23,7 +23,11 @@ class Breakpoints {
             
             let genes = window.genes;
             
+            // add a 'gene' attribute to every exon (not sure why?)
             Object.keys(genes).forEach(g => genes[g].exons.forEach(e => e.gene = g))
+            
+            // augment the breakpoints.genes object with all the genes from the
+            // window global genes
             
             Object.assign(this.genes, window.genes); // loaded as a side effect of loading breakpoints
                                  // may break if > 1 breakpoints loaded

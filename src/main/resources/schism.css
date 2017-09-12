@@ -188,6 +188,10 @@ text.tickChromosomeLabel {
     font-size: 15px;
 }
 
+text.geneStrandArrow {
+    font-size: 10px;
+}
+
 .dialogButtons {
     padding: 0.5em 0;
     text-align: right;
@@ -197,7 +201,7 @@ text.tickChromosomeLabel {
     margin: 0.5em 0;
 }
 
-.tags {
+.tags, .geneListTag {
     background-color: #33aa33;
     border-radius: 5px;
     color: white;
@@ -205,6 +209,12 @@ text.tickChromosomeLabel {
     padding: 3px 5px;
     font-size: 83%;
     margin: 3px;
+}
+
+span.geneListTag {
+    background-color: red;
+    color: white;
+    font-weight: bold;
 }
 
 .tag0 {

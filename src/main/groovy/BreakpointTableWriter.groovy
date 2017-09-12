@@ -250,7 +250,8 @@ class BreakpointTableWriter {
             [ 
               gene, 
               [
-                  exons: exons.collect {[ from: it.from, to: it.to]}
+                  exons: exons.collect {[ from: it.from, to: it.to]},
+                  strand: exons.getAt(0)?.strand
               ]
             ]
         }

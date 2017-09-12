@@ -194,11 +194,13 @@ $(document).ready(function() {
         id: location.host + ':' + location.pathname,
         tags: {},
         greyed: {},
+        geneList: {},
         save: function() {
             console.log('Saving to: ' + 'schism-'+model.id)
             store.set('schism-'+model.id, {
                 tags: window.model.tags,
-                greyed: window.model.greyed
+                greyed: window.model.greyed,
+                geneList: window.model.geneList
             })
         },
         load: function() {
