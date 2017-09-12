@@ -137,7 +137,7 @@ class BreakpointTableWriter {
             }
             
             Map<String,String> bamFilesBySample = bams.collectEntries { 
-                [it.samples[0], options.localBamPath + it.samFile.name]
+                [it.samples[0], (options.localBamPath?:'') + it.samFile.name]
             }
             jsonWriter.println('bamFiles = ' + JsonOutput.toJson(bamFilesBySample))
                 
