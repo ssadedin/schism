@@ -325,7 +325,6 @@ class FindNovelBreakpoints extends DefaultActor {
             // inthe database
             BreakpointInfo partner = null
             BreakpointSampleInfo bpsi = bp.observations[0]
-            List<BreakpointInfo> partners
             if(bpsi.consensusScore > 10.0) { // a bit arbitrary
                
                 // Note we search for 1 bp less than the soft clip size because we are allowing for
@@ -353,30 +352,66 @@ class FindNovelBreakpoints extends DefaultActor {
                 if(verbose)
                      log.info "Searching reverse complement: $reverseComplement (bp=$bp.id) finds " + reverseComplementPartners.size() + " with costs " + 
                               reverseComplementPartners.collect { TrieQuery q -> q.cost(TrieNode.DEFAULT_COSTS) }.join(',')
+                              
+                List<TrieQuery> allPartners = forwardPartners + reversePartners + reverseComplementPartners
                 
-                partners = (List<BreakpointInfo>)(forwardPartners + reversePartners + reverseComplementPartners).grep { TrieQuery q ->
+                List<TrieQuery<BreakpointInfo>> partnerQueries = (allPartners).grep { TrieQuery q ->
                     q.cost(TrieNode.DEFAULT_COSTS) < 5.0
-                }.sort { TrieQuery q ->
-                    q.cost(TrieNode.DEFAULT_COSTS)
-                }.collect { TrieQuery<BreakpointInfo> q ->
-                    q.result
-                }.flatten()
-                 .grep { BreakpointInfo p -> bp.id != p.id }
-                    
-                if(partners.size()>0) {
-                    log.info "Found ${partners.size()} partners for $bp starting with: ${partners.take(2).join(',')}" 
-                    if(partners.size()<this.maxPartnersToJoin) {
-                        bpsi.partner = partners[0]
-                        ++partnered
-                    }
-                    else {
-                        log.info "Too many partners (${partners.size()}) to link $bp"
-                        commonPartners.add(forwardSequence)
-                        commonPartners.add(reverseSequence)
-                        commonPartners.add(reverseComplement)
-                    }
                 }
                 
+                if(partnerQueries.size()>this.maxPartnersToJoin) {
+                    log.info "Too many partners (${partnerQueries.size()}) to link $bp based on $forwardSequence"
+                    commonPartners.add(forwardSequence)
+                    commonPartners.add(reverseSequence)
+                    commonPartners.add(reverseComplement)
+                }
+                else {
+                    
+                    partnerQueries = partnerQueries.sort { TrieQuery q ->
+                        q.cost(TrieNode.DEFAULT_COSTS)
+                    }
+                    
+                    if(partnerQueries.size()>0) {
+                        
+                        int lowestCost = (int) partnerQueries[0].cost(TrieNode.DEFAULT_COSTS)
+                        
+                        partnerQueries = partnerQueries.takeWhile { TrieQuery q ->
+                            (int)q.cost(TrieNode.DEFAULT_COSTS) == lowestCost
+                        }
+                        
+                        
+                        List<BreakpointInfo> partners = (List<BreakpointInfo>)partnerQueries.collect { TrieQuery<BreakpointInfo> q ->
+                            q.result
+                        }.flatten()
+                         .grep { BreakpointInfo p -> bp.id != p.id }
+                        
+                        log.info "Found ${partners.size()} equal partners for $bp starting with: ${partners.take(2).join(',')}" 
+                        
+                        // If any partner already points back to us, partner with them
+                        BreakpointInfo recipricalPartner = partners.find { BreakpointInfo p -> p.observations[0].partner?.id == bp.id }
+                        if(recipricalPartner) {
+                            log.info "Partnered $bp.id to reciprical breakpoint $recipricalPartner"
+                            bpsi.partner = recipricalPartner
+                        }
+                        else  {
+                            // Of all the partners with equal score on the same chromosome, take the closest
+                            bpsi.partner = partners.grep { BreakpointInfo p -> p.chr == bp.chr }?.min { BreakpointInfo partnerBp ->
+                                Math.abs(partnerBp.id - bp.id)
+                            }
+                            
+                            if(bpsi.partner) {
+                                log.info "Partnered $bp.id to closest on same chromosome: $bpsi.partner"
+                            }
+                            else {
+                                log.info "Partnered $bp.id to minimum cost match on other chr: $bpsi.partner"
+                                bpsi.partner = partners[0]
+                            }
+                        }
+                        
+                        if(bpsi.partner)
+                            ++partnered
+                    }
+                }
             }
             trie.TrieNode.verbose = false
             
