@@ -297,6 +297,8 @@ class FindNovelBreakpoints extends DefaultActor {
         return freq
     }
     
+    Set<String> commonPartners = new HashSet(1000)
+    
     @CompileStatic
     void partnerBreakpoints() {
         List<BreakpointInfo> outputBreakpoints = new ArrayList(breakpoints.size())
@@ -323,6 +325,11 @@ class FindNovelBreakpoints extends DefaultActor {
                 String forwardSequence = (String)bpsi.bases.take(softClipSize-1)
                 String reverseSequence = (String)bpsi.bases.reverse().take(softClipSize-1)
                 String reverseComplement = FASTA.reverseComplement(bpsi.bases).take(softClipSize-1)
+                
+                if(forwardSequence in commonPartners) {
+                    log.info "$bp has Recurrent common partner sequence $forwardSequence"
+                    continue
+                }
                 
                 if(verbose)
                      log.info "Searching forward for $forwardSequence (bp=$bp.id)"
@@ -353,7 +360,10 @@ class FindNovelBreakpoints extends DefaultActor {
                         ++partnered
                     }
                     else {
-                        log.info "Too many partners (${partners.size()})to link $bp"
+                        log.info "Too many partners (${partners.size()}) to link $bp"
+                        commonPartners.add(forwardSequence)
+                        commonPartners.add(reverseSequence)
+                        commonPartners.add(reverseComplement)
                     }
                 }
                 
