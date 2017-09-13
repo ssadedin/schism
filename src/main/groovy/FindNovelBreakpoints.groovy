@@ -24,6 +24,7 @@ import java.beans.beancontext.BeanContextServiceProviderBeanInfo
 import java.nio.file.Files
 import java.text.NumberFormat;
 import java.util.concurrent.atomic.DoubleAdder
+import java.util.logging.Level
 import java.util.stream.Stream
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
@@ -147,6 +148,8 @@ class FindNovelBreakpoints extends DefaultActor {
     
     int indexLength = softClipSize-partnerIndexBases
     
+    int errorCount = 0
+    
     void processBreakpoint(BreakpointMessage msg) {
         ++total
           
@@ -155,7 +158,6 @@ class FindNovelBreakpoints extends DefaultActor {
             return
             
         boolean verbose = false
-        
         try {
             Long bpId = XPos.computePos(msg.chr, msg.pos)
             
@@ -194,7 +196,10 @@ class FindNovelBreakpoints extends DefaultActor {
             breakpoints.add(bpInfo)
         }
         catch(Exception e) {
+            ++errorCount
             log.warning "Failed to add breakpoint at $msg.chr:$msg.pos: " + e
+            if(errorCount < 3)
+                log.log(Level.SEVERE, "Failed to add breakpoint at $msg.chr:$msg.pos: ", e)
         }
     }
     
