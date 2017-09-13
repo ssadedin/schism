@@ -675,7 +675,7 @@ Vue.component('BreakpointsView', {
         console.log("Updated breakpoints: " + model.breakpoints.breakpoints.length);
         this.filterSamples(this)
       })
-      this.geneList = Object.values(model.geneList).map(gl => gl.gene).join(',')
+      this.geneList = Object.values(model.geneList).map(gl => gl.gene).join(' ')
   },
   
   watch: {
@@ -927,7 +927,7 @@ Vue.component('BreakpointsView', {
             setTimeout(() => this.$refs.bamFilePrefixInput.focus(), 10)
         },
         configClose: function() {
-            model.geneList = _.indexBy(this.geneList.split(',').map(x => { return { gene: x.trim(), lists: ['Priority'] }}), x => x.gene )
+            model.geneList = _.indexBy(this.geneList.split(' ').map(x => { return { gene: x.trim(), lists: ['Priority'] }}), x => x.gene )
             model.save()
         }
     },
