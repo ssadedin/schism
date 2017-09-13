@@ -93,6 +93,11 @@ class FindNovelBreakpoints extends DefaultActor {
     List<String> excludeSamples
     
     BreakpointDatabaseSet databaseSet = null
+    
+    /**
+     * Set to true while running, then false after the "end" message is processed
+     */
+    String phase = "none"
 	
     /**
      * Create a breakpoint finder based on the given options
@@ -129,8 +134,13 @@ class FindNovelBreakpoints extends DefaultActor {
                     processBreakpoint(msg)
                 }
                 else
+                if(String.valueOf(msg).startsWith("phase:")) {
+                    this.phase = String.valueOf(msg).replaceAll('^phase:','')
+                }
+                else
                 if(msg == "end") {
                     terminate()
+                    this.phase = "finished"
                 }
             }
         }
@@ -412,6 +422,27 @@ class FindNovelBreakpoints extends DefaultActor {
             log.info "BAM file includes regions $includedRegions"
         }
         
+        this.phase = "discover"
+        this.runOverRegions(includedRegions)
+        
+        this.send "phase:extend"
+       
+        while(phase != "extend") {
+            Thread.sleep(100)
+        }
+        
+        log.info "Partnering ${breakpoints.size()} breakpoints ..."
+        this.partnerBreakpoints()
+        
+        Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
+        log.info "Processing ${extendedRegions.numberOfRanges} extended regions (${extendedRegions.size()}bp)"
+        runOverRegions(extendedRegions)
+        
+        this.send "end"
+        this.join()
+    }
+    
+    void runOverRegions(Iterable<Region> includedRegions) {
         for(region in includedRegions) {
             def bpe = new BreakpointExtractor(bam, allowMultiSample: options.multi)
             bpe.breakpointListener = this
@@ -419,18 +450,48 @@ class FindNovelBreakpoints extends DefaultActor {
                 bpe.filter.setAdapterSequence(options.adapter)
             bpe.run(region)
         }
-
-        this.send "end"
-        this.join()
+    }
+    
+    /**
+     * Identify regions that are of interest based on linkage to discovered breakpoints
+     * 
+     * @return
+     */
+    Regions findExtendedRegions(Regions existingRegions) {
+        Regions result = new Regions()
         
-        log.info "Partnering ${breakpoints.size()} breakpoints ..."
-        this.partnerBreakpoints()
+        for(BreakpointInfo bp in breakpoints) {
+            
+            // does the breakpoint have multiple reads linking to an unexplored region?
+            Regions bpMates = new Regions()
+            for(BreakpointSampleInfo obs in bp.observations) {
+                for(Long xpos in obs.mateXPos) {
+                    Region r = XPos.parsePos(xpos)
+                    r.from -= 150
+                    r.to += 150
+                    bpMates.addRegion(r)
+                }
+            }
+            
+            Regions mateCoverage = bpMates.coverage()
+            
+            // Add all the regions where at least mates
+            // of breakpoint reads overlap
+            mateCoverage.grep { it.extra > 2 }.each { Region r ->
+                if(!r.overlaps(existingRegions)) {
+                    log.info "Found breakpoint mate region: $r for $bp"
+                    result.addRegion(r.chr, Math.max(0,r.from-500), r.to+500)
+                }
+            }
+        }
+        return result.reduce()
     }
 	
 	/**
 	 * Close database connections
 	 */
 	void close() {
+        log.info "Closing databases"
 	    this.databaseSet.close()
 	}
     

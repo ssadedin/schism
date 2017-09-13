@@ -45,6 +45,7 @@ class BreakpointSampleInfo {
         
         if(reads.size()>1) {
             List<String> softClips = reads.collect {  read ->
+                this.mateXPos.add(XPos.computePos(read.mateReferenceName, read.mateAlignmentStart))
                 extractSoftClip(read, softClipSize) 
             }
             Consensus consensus = new Consensus(softClips, softClipSize).build() 
@@ -113,6 +114,8 @@ class BreakpointSampleInfo {
      * Count of reads supporting the breakpoint
      */
     int obs
+    
+    List<Long> mateXPos = []
     
     /**
      * If a partner was identified for this breakpoint, it can be set here
