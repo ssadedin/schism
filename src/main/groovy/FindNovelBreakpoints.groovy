@@ -523,11 +523,11 @@ class FindNovelBreakpoints extends DefaultActor {
     }
 	
 	/**
-	 * Close database connections
+	 * Close any connections owned by this instance
 	 */
 	void close() {
-        log.info "Closing databases"
-	    this.databaseSet.close()
+//        log.info "Closing databases"
+//	    this.databaseSet.close()
 	}
     
     /**
@@ -638,12 +638,17 @@ class FindNovelBreakpoints extends DefaultActor {
         
         SAM bam = new SAM(bamFilePaths[0])
         
+        List<FindNovelBreakpoints> fnbs
         BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
-        
-        List<FindNovelBreakpoints> fnbs = GParsPool.withPool(concurrency) {
-            bamFilePaths.collectParallel { String bamFilePath ->
-                analyseSingleBam(opts, bamFilePath, databaseSet)
+        try {
+            fnbs = GParsPool.withPool(concurrency) {
+                bamFilePaths.collectParallel { String bamFilePath ->
+                    analyseSingleBam(opts, bamFilePath, databaseSet)
+                }
             }
+        }
+        finally {
+            databaseSet.close()
         }
             
         // Merge the outputs
