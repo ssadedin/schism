@@ -99,7 +99,7 @@ class FindNovelBreakpoints extends DefaultActor {
      * @param options
      * @param dbFiles
      */
-    FindNovelBreakpoints(def options, String bamFile, List<String> dbFiles) {
+    FindNovelBreakpoints(def options, String bamFile, BreakpointDatabaseSet databaseSet) {
         this.options = options
         if(options.mindp)
             this.minDepth = options.mindp.toInteger()
@@ -114,12 +114,7 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Found sample ${bam.samples[0]} in bam file" 
         this.sample = bam.samples[0]
         
-        databaseSet = new BreakpointDatabaseSet(dbFiles, bam)
-        
-        if(options.xss) {
-            databaseSet.excludeSamples = options.xss as List
-            databaseSet.excludeSamples.add(this.sample)
-        }
+        this.databaseSet = databaseSet
     }
     
     /**
@@ -265,7 +260,7 @@ class FindNovelBreakpoints extends DefaultActor {
         if(reads.size() < minDepth)
             return -1
 
-        int freq = databaseSet.getBreakpointFrequency(msg.chr, msg.pos)
+        int freq = databaseSet.getBreakpointFrequency(msg.chr, msg.pos, this.sample)
         if(freq > maxSampleCount) {
             ++tooCommon
             return -1
@@ -529,9 +524,14 @@ class FindNovelBreakpoints extends DefaultActor {
         
         int concurrency = opts.n ? opts.n.toInteger() : 1
         
+        
+        SAM bam = new SAM(bamFilePaths[0])
+        
+        BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
+        
         List<FindNovelBreakpoints> fnbs = GParsPool.withPool(concurrency) {
             bamFilePaths.collectParallel { String bamFilePath ->
-                analyseSingleBam(opts, bamFilePath, dbFiles)
+                analyseSingleBam(opts, bamFilePath, databaseSet)
             }
         }
             
@@ -594,7 +594,11 @@ class FindNovelBreakpoints extends DefaultActor {
     
     static void processSingleBam(OptionAccessor opts, String bamFilePath, List<String> dbFiles) {
         PrintStream output = getOutput(opts)
-        FindNovelBreakpoints fnb = analyseSingleBam(opts, bamFilePath, dbFiles)
+        
+        SAM bam = new SAM(bamFilePath)
+        BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
+            
+        FindNovelBreakpoints fnb = analyseSingleBam(opts, bamFilePath, databaseSet)
         try {
             fnb.printSummaryInfo()
             
@@ -625,7 +629,7 @@ class FindNovelBreakpoints extends DefaultActor {
      * @param dbFiles       List of control databases to use for filtering
      * @return              a FindNovelBreakpoints object containing the breakpoints found
      */
-    static FindNovelBreakpoints analyseSingleBam(OptionAccessor opts, String bamFilePath, List<String> dbFiles) {
+    static FindNovelBreakpoints analyseSingleBam(OptionAccessor opts, String bamFilePath, BreakpointDatabaseSet databaseSet) {
         
         log.info "Analyzing ${bamFilePath}"
         
@@ -635,7 +639,7 @@ class FindNovelBreakpoints extends DefaultActor {
         if(regions.numberOfRanges == 0)
             regions = null
             
-        FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, dbFiles).start()
+        FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet).start()
 		try {
             fnb.reference = resolveReference(opts)
 	        fnb.refGene = refGene
@@ -646,6 +650,14 @@ class FindNovelBreakpoints extends DefaultActor {
             throw e
 		}
         return fnb
+    }
+    
+    static BreakpointDatabaseSet getBreakpointDatabases(OptionAccessor opts, SAM bam, List<String> dbFiles) {
+        BreakpointDatabaseSet databaseSet = new BreakpointDatabaseSet(dbFiles, bam.contigs)       
+        if(opts.xss) {
+            databaseSet.excludeSamples = opts.xss as List
+        }
+        return databaseSet
     }
     
     /**

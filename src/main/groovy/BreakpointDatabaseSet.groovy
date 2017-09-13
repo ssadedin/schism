@@ -42,13 +42,9 @@ class BreakpointDatabaseSet {
     
     List<String> excludeSamples = []
     
-    String sample = null
-    
     String chrPrefix = null
     
-    BreakpointDatabaseSet(List<String> dbFiles, SAM bam) {
-        
-        this.sample = bam.samples[0]
+    BreakpointDatabaseSet(List<String> dbFiles, Map<String,Integer> contigs) {
         
         log.info "Opening databases ..."
         List<Sql> dbs = dbFiles.collect {  dbFile ->
@@ -63,16 +59,15 @@ class BreakpointDatabaseSet {
 		this.databaseConnections = dbs
         
         log.info "Determining database ranges ..."
-        this.databases = determineDatabaseRanges(dbs, bam)
+        this.databases = determineDatabaseRanges(dbs, contigs)
     }
     
     @CompileStatic
-    Regions determineDatabaseRanges(List<Sql> databases, SAM bam) {
+    Regions determineDatabaseRanges(List<Sql> databases, Map<String,Integer> contigs) {
         
-        this.chrPrefix = bam.contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
+        this.chrPrefix = contigs*.key.any { it.startsWith('chr') } ? "chr" : ""
         
         Regions dbRegions = new Regions()
-        def contigs = bam.getContigs()
         for(Sql db in databases) {
             GroovyRowResult minmax = null
             synchronized(db) { 
@@ -136,7 +131,7 @@ class BreakpointDatabaseSet {
     
     
     @CompileStatic
-    int getBreakpointFrequency(String chr, int pos) {
+    int getBreakpointFrequency(String chr, int pos, String excludeSample) {
         List<Sql> dbs = (List<Sql>)databases.getOverlaps(chr, pos, pos+1).collect { r ->
             GRange gr = (GRange)r
             Expando e = (Expando)gr.extra
@@ -153,12 +148,12 @@ class BreakpointDatabaseSet {
         
             
         return (int)dbs.collect { db ->
-            getDbBreakpointFrequency(db, chr,pos)
+            getDbBreakpointFrequency(db, chr,pos, excludeSample)
         }.sum()?:0
     }
     
     @CompileStatic
-    int getDbBreakpointFrequency(Sql db, String chr, int pos) {
+    int getDbBreakpointFrequency(Sql db, String chr, int pos, String excludeSample) {
         long breakpointId = XPos.computePos(chr, pos)
         synchronized(db) {
             def dbBreakpoint = db.firstRow("select sample_count from breakpoint where id = $breakpointId")        
@@ -170,12 +165,12 @@ class BreakpointDatabaseSet {
                     db.firstRow("""
                         select count(1) as exclude_count from breakpoint_observation 
                         where id = $breakpointId 
-                        and sample in (""" + "${excludeSamples.join("','")})" + """
+                        and sample in (""" + "${excludeSamples.join("','")},$excludeSample)" + """
                     """)
                 }
                 else {
                     excludeResult = db.firstRow("""
-                       select count(1) as exclude_count from breakpoint_observation where id = $breakpointId and sample=$sample
+                       select count(1) as exclude_count from breakpoint_observation where id = $breakpointId and sample=$excludeSample
                     """)        
                 }
                 
