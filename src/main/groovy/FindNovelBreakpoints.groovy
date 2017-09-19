@@ -369,50 +369,9 @@ class FindNovelBreakpoints extends DefaultActor {
                 }
                 else {
                     
-                    partnerQueries = partnerQueries.sort { TrieQuery q ->
-                        q.cost(TrieNode.DEFAULT_COSTS)
-                    }
-                    
-                    if(partnerQueries.size()>0) {
-                        
-                        int lowestCost = (int) partnerQueries[0].cost(TrieNode.DEFAULT_COSTS)
-                        
-                        partnerQueries = partnerQueries.takeWhile { TrieQuery q ->
-                            (int)q.cost(TrieNode.DEFAULT_COSTS) == lowestCost
-                        }
-                        
-                        
-                        List<BreakpointInfo> partners = (List<BreakpointInfo>)partnerQueries.collect { TrieQuery<BreakpointInfo> q ->
-                            q.result
-                        }.flatten()
-                         .grep { BreakpointInfo p -> bp.id != p.id }
-                        
-                        log.info "Found ${partners.size()} equal partners for $bp starting with: ${partners.take(2).join(',')}" 
-                        
-                        // If any partner already points back to us, partner with them
-                        BreakpointInfo recipricalPartner = partners.find { BreakpointInfo p -> p.observations[0].partner?.id == bp.id }
-                        if(recipricalPartner) {
-                            log.info "Partnered $bp.id to reciprical breakpoint $recipricalPartner"
-                            bpsi.partner = recipricalPartner
-                        }
-                        else  {
-                            // Of all the partners with equal score on the same chromosome, take the closest
-                            bpsi.partner = partners.grep { BreakpointInfo p -> p.chr == bp.chr }?.min { BreakpointInfo partnerBp ->
-                                Math.abs(partnerBp.id - bp.id)
-                            }
-                            
-                            if(bpsi.partner) {
-                                log.info "Partnered $bp.id to closest on same chromosome: $bpsi.partner"
-                            }
-                            else {
-                                log.info "Partnered $bp.id to minimum cost match on other chr: " + partners[0].id
-                                bpsi.partner = partners[0]
-                            }
-                        }
-                        
-                        if(bpsi.partner)
-                            ++partnered
-                    }
+                    chooseBestPartner(bp, bpsi, partnerQueries)
+                    if(bpsi.partner)
+                        ++partnered
                 }
             }
             trie.TrieNode.verbose = false
@@ -426,6 +385,75 @@ class FindNovelBreakpoints extends DefaultActor {
                 outputBreakpoints.add(bp)
 //            }
               this.breakpoints = outputBreakpoints;
+        }
+    }
+    
+    /**
+     * Choose the best partner from among the given list of queries for partners based
+     * on overlap of breakpoint sequence.
+     * 
+     * @param bp
+     * @param bpsi
+     * @param partnerQueries
+     */
+    void chooseBestPartner(BreakpointInfo bp, BreakpointSampleInfo bpsi, List<TrieQuery<BreakpointInfo>> partnerQueries) {
+        
+        if(partnerQueries.isEmpty())
+            return
+        
+        partnerQueries = partnerQueries.sort { TrieQuery q ->
+            q.cost(TrieNode.DEFAULT_COSTS)
+        }
+
+        int lowestCost = (int) partnerQueries[0].cost(TrieNode.DEFAULT_COSTS)
+
+        partnerQueries = partnerQueries.takeWhile { TrieQuery q ->
+            (int)q.cost(TrieNode.DEFAULT_COSTS) == lowestCost
+        }
+
+        List<BreakpointInfo> partners = (List<BreakpointInfo>)partnerQueries.collect { TrieQuery<BreakpointInfo> q ->
+            q.result
+        }.flatten()
+        .grep { BreakpointInfo p -> bp.id != p.id }
+        
+        log.info "Found ${partners.size()} equal partners for $bp starting with: ${partners.take(2).join(',')}"
+        if(partners.isEmpty())
+            return
+
+        if(partners.size() == 1)
+            bpsi.partner = partners[0]
+        else
+            chooseBetweenEqualCostPartners(bp, bpsi, partners)
+    }
+    
+    /**
+     * Choose the best partner from a list of partners who have equally well matching 
+     * sequence at their breakpoints.
+     * 
+     * @param bpsi
+     * @param partners
+     */
+    void chooseBetweenEqualCostPartners(BreakpointInfo bp, BreakpointSampleInfo bpsi, List<BreakpointInfo> partners) {
+        
+        // If any partner already points back to us, partner with them
+        BreakpointInfo reciprocalPartner = partners.find { BreakpointInfo p -> p.observations[0].partner?.id == bp.id }
+        if(reciprocalPartner) {
+            log.info "Partnered $bp.id to reciprical breakpoint $reciprocalPartner"
+            bpsi.partner = reciprocalPartner
+        }
+        else {
+            // Of all the partners with equal score on the same chromosome, take the closest
+            bpsi.partner = partners.grep { BreakpointInfo p -> p.chr == bp.chr }?.min { BreakpointInfo partnerBp ->
+                Math.abs(partnerBp.id - bp.id)
+            }
+                            
+            if(bpsi.partner) {
+                log.info "Partnered $bp.id to closest on same chromosome: $bpsi.partner"
+            }
+            else {
+                log.info "Partnered $bp.id to minimum cost match on other chr: " + partners[0].id
+                bpsi.partner = partners[0]
+            }
         }
     }
     
