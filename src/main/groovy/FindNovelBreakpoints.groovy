@@ -663,26 +663,23 @@ class FindNovelBreakpoints extends DefaultActor {
         
         log.info "Analying BAM Files: $bamFilePaths"
         
+        BreakpointDatabaseSet databaseSet 
         try {
             int concurrency = opts.n ? opts.n.toInteger() : 1
             SAM bam = new SAM(bamFilePaths[0])
             
             List<FindNovelBreakpoints> fnbs
-            BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
-            try {
-                fnbs = GParsPool.withPool(concurrency) {
-                    bamFilePaths.collectParallel { String bamFilePath ->
-                        analyseSingleBam(opts, bamFilePath, databaseSet)
-                    }
+            databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
+            
+            fnbs = GParsPool.withPool(concurrency) {
+                bamFilePaths.collectParallel { String bamFilePath ->
+                    analyseSingleBam(opts, bamFilePath, databaseSet)
                 }
-            }
-            finally {
-                databaseSet.close()
             }
                 
             // Merge the outputs
             Map<Long, BreakpointInfo> mergedBreakpoints = mergeBreakpointInfos(fnbs*.breakpoints)
-                
+                    
             FindNovelBreakpoints fnb = fnbs[0]
             PrintStream output = getOutput(opts)
             try {
@@ -700,10 +697,15 @@ class FindNovelBreakpoints extends DefaultActor {
             finally {
                 output.close()
             }
+
         }
         catch(Exception e) {
             StackTraceUtils.sanitize(e)
             throw e
+        }
+        finally {
+            if(databaseSet != null)
+                databaseSet.close()
         }
     }
     
