@@ -28,6 +28,7 @@ import java.util.logging.Level
 import java.util.stream.Stream
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
+import org.codehaus.groovy.runtime.StackTraceUtils
 
 import graxxia.IntegerStats
 import graxxia.Stats
@@ -233,6 +234,7 @@ class FindNovelBreakpoints extends DefaultActor {
     void indexBreakpoint(BreakpointInfo bpInfo, String [] reference, boolean verbose) {
         String opposingReference = reference[0]
         
+        
         if(verbose)
             log.info "Indexing opposing reference for $bpInfo.id: " + opposingReference
             
@@ -403,7 +405,7 @@ class FindNovelBreakpoints extends DefaultActor {
                                 log.info "Partnered $bp.id to closest on same chromosome: $bpsi.partner"
                             }
                             else {
-                                log.info "Partnered $bp.id to minimum cost match on other chr: $bpsi.partner"
+                                log.info "Partnered $bp.id to minimum cost match on other chr: " + partners[0].id
                                 bpsi.partner = partners[0]
                             }
                         }
@@ -633,43 +635,47 @@ class FindNovelBreakpoints extends DefaultActor {
         
         log.info "Analying BAM Files: $bamFilePaths"
         
-        int concurrency = opts.n ? opts.n.toInteger() : 1
-        
-        
-        SAM bam = new SAM(bamFilePaths[0])
-        
-        List<FindNovelBreakpoints> fnbs
-        BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
         try {
-            fnbs = GParsPool.withPool(concurrency) {
-                bamFilePaths.collectParallel { String bamFilePath ->
-                    analyseSingleBam(opts, bamFilePath, databaseSet)
+            int concurrency = opts.n ? opts.n.toInteger() : 1
+            SAM bam = new SAM(bamFilePaths[0])
+            
+            List<FindNovelBreakpoints> fnbs
+            BreakpointDatabaseSet databaseSet = getBreakpointDatabases(opts, bam, dbFiles)
+            try {
+                fnbs = GParsPool.withPool(concurrency) {
+                    bamFilePaths.collectParallel { String bamFilePath ->
+                        analyseSingleBam(opts, bamFilePath, databaseSet)
+                    }
                 }
             }
+            finally {
+                databaseSet.close()
+            }
+                
+            // Merge the outputs
+            Map<Long, BreakpointInfo> mergedBreakpoints = mergeBreakpointInfos(fnbs*.breakpoints)
+                
+            FindNovelBreakpoints fnb = fnbs[0]
+            PrintStream output = getOutput(opts)
+            try {
+                new BreakpointTableWriter(
+                    databases: fnb.databaseSet,
+                    refGene: fnb.refGene,
+                    options: opts,
+                    bams: fnb*.bam
+                ).outputBreakpoints(
+                    mergedBreakpoints.entrySet().stream().map { it.value },
+                    mergedBreakpoints.size(),
+                    output
+                )
+            }
+            finally {
+                output.close()
+            }
         }
-        finally {
-            databaseSet.close()
-        }
-            
-        // Merge the outputs
-        Map<Long, BreakpointInfo> mergedBreakpoints = mergeBreakpointInfos(fnbs*.breakpoints)
-            
-        FindNovelBreakpoints fnb = fnbs[0]
-        PrintStream output = getOutput(opts)
-        try {
-            new BreakpointTableWriter(
-                databases: fnb.databaseSet,
-                refGene: fnb.refGene,
-                options: opts,
-                bams: fnb*.bam
-            ).outputBreakpoints(
-                mergedBreakpoints.entrySet().stream().map { it.value },
-                mergedBreakpoints.size(),
-                output
-            )
-        }
-        finally {
-            output.close()
+        catch(Exception e) {
+            StackTraceUtils.sanitize(e)
+            throw e
         }
     }
     
@@ -747,25 +753,34 @@ class FindNovelBreakpoints extends DefaultActor {
      */
     static FindNovelBreakpoints analyseSingleBam(OptionAccessor opts, String bamFilePath, BreakpointDatabaseSet databaseSet) {
         
-        log.info "Analyzing ${bamFilePath}"
-        
-        SAM bam = new SAM(bamFilePath)
-        RefGenes refGene = getRefGene(opts, bam)
-        Regions regions = resolveRegions(refGene, bam, opts)
-        if(regions.numberOfRanges == 0)
-            regions = null
+        try {
+            log.info "Analyzing ${bamFilePath}"
             
-        FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet).start()
-		try {
-            fnb.reference = resolveReference(opts)
-	        fnb.refGene = refGene
-	        fnb.run(regions)
-		}
-		catch(Exception e) {
-			fnb.close()
+            SAM bam = new SAM(bamFilePath)
+            RefGenes refGene = getRefGene(opts, bam)
+            Regions regions = resolveRegions(refGene, bam, opts)
+            if(regions.numberOfRanges == 0)
+                regions = null
+                
+            FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet).start()
+    		try {
+                fnb.reference = resolveReference(opts)
+    	        fnb.refGene = refGene
+    	        fnb.run(regions)
+    		}
+    		catch(Exception e) {
+    			fnb.close()
+                throw e
+    		}
+            return fnb
+        }
+        catch(Exception e) {
+            log.severe "========================================================================"
+            log.severe "Error!"
+            e.printStackTrace()
+            log.severe "========================================================================"
             throw e
-		}
-        return fnb
+        }
     }
     
     static BreakpointDatabaseSet getBreakpointDatabases(OptionAccessor opts, SAM bam, List<String> dbFiles) {
