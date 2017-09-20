@@ -794,8 +794,10 @@ class FindNovelBreakpoints extends DefaultActor {
             
             log.info "Regions cover chromosomes: " + regions?.collect { it.chr }?.unique()
             
-            if(regions.numberOfRanges == 0)
+            if(regions.numberOfRanges == 0) {
+                log.info "Note: regions provided but empty"
                 regions = null
+            }
                 
             FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet).start()
     		try {
@@ -891,12 +893,15 @@ class FindNovelBreakpoints extends DefaultActor {
         
         regions = addGeneRegions(refGene, opts,regions)
         
+        log.info "Resolved ${regions.numberOfRanges} regions (${regions.size()}bp) after adding genes"
+        
         if(regions != null && opts.pad) {
             int padding = opts.pad.toInteger()
             log.info "Adding ${padding}bp to regions"
             regions = new Regions(regions.collect { Region r ->
                 new Region(r.chr, Math.max(0, (r.from-padding))..(r.to + padding))
             })
+            log.info "After adding padding there are ${regions.size()}bp to analyse"
         }
         
         if(regions == null) {
@@ -914,6 +919,7 @@ class FindNovelBreakpoints extends DefaultActor {
         if(opts.mask) {
             Regions maskBED = new BED(opts.mask).load().reduce()
             regions = regions.intersect(maskBED)
+            log.info "After intersecting with masked regions have ${regions.size()}bp to analyse"
         }
         
         return regions 
