@@ -524,6 +524,7 @@ class FindNovelBreakpoints extends DefaultActor {
      * 
      * @return
      */
+    @CompileStatic
     Regions findExtendedRegions(Regions existingRegions) {
         Regions result = new Regions()
         
@@ -534,9 +535,9 @@ class FindNovelBreakpoints extends DefaultActor {
             for(BreakpointSampleInfo obs in bp.observations) {
                 for(Long xpos in obs.mateXPos) {
                     Region r = XPos.parsePos(xpos)
-                    r.from -= 150
-                    r.to += 150
-                    bpMates.addRegion(r)
+                    if(!r.isMinorContig()) {
+                        bpMates.addRegion(new Region(r.chr, r.from-150, r.to+150))
+                    }
                 }
             }
             
@@ -544,7 +545,8 @@ class FindNovelBreakpoints extends DefaultActor {
             
             // Add all the regions where at least mates
             // of breakpoint reads overlap
-            mateCoverage.grep { it.extra > 2 }.each { Region r ->
+            mateCoverage.grep {Region r -> (int)r.extra > 2 }.each { Object robj ->
+                Region r = (Region)robj
                 if(!r.overlaps(existingRegions)) {
                     log.info "Found breakpoint mate region: $r for $bp"
                     result.addRegion(r.chr, Math.max(0,r.from-500), r.to+500)
