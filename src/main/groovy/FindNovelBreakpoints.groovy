@@ -463,6 +463,7 @@ class FindNovelBreakpoints extends DefaultActor {
     void run(Regions regionsToAnalyse=null) {
         
         log.info "Searching for breakpoints supported by at least ${minDepth} reads and observed in fewer than ${maxSampleCount} samples in control database"
+        log.info "Regions provided? " + regionsToAnalyse
         
         List<Region> includedRegions 
         if(regionsToAnalyse) {
@@ -479,7 +480,7 @@ class FindNovelBreakpoints extends DefaultActor {
             log.info "Probing for included regions ..."
             includedRegions = regions.grep { r ->
                 def chr = r.chr.replaceAll('^chr','')
-                !chr.startsWith('Un') && !chr.startsWith('GL') && !chr.startsWith('NC')
+                !chr.startsWith('Un') && !chr.startsWith('GL') && !chr.startsWith('NC') && !chr.startsWith('hs37')
             }.grep { Region r ->
                 bam.withIterator(r) { it.hasNext() }
             }
@@ -499,6 +500,7 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Partnering ${breakpoints.size()} breakpoints ..."
         this.partnerBreakpoints()
         
+        log.info "Searching for extended regions in $bam.samFile ..."
         Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
         log.info "Processing ${extendedRegions.numberOfRanges} extended regions (${extendedRegions.size()}bp)"
         runOverRegions(extendedRegions)
@@ -789,6 +791,9 @@ class FindNovelBreakpoints extends DefaultActor {
             SAM bam = new SAM(bamFilePath)
             RefGenes refGene = getRefGene(opts, bam)
             Regions regions = resolveRegions(refGene, bam, opts)
+            
+            log.info "Regions cover chromosomes: " + regions?.collect { it.chr }?.unique()
+            
             if(regions.numberOfRanges == 0)
                 regions = null
                 
@@ -797,6 +802,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 fnb.reference = resolveReference(opts)
     	        fnb.refGene = refGene
     	        fnb.run(regions)
+                log.info "Analysis of $bamFilePath complete"
     		}
     		catch(Exception e) {
     			fnb.close()
