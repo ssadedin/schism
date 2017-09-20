@@ -25,6 +25,7 @@ import java.nio.file.Files
 import java.text.NumberFormat;
 import java.util.concurrent.atomic.DoubleAdder
 import java.util.logging.Level
+import java.util.logging.Logger
 import java.util.stream.Stream
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
@@ -53,8 +54,9 @@ import trie.TrieQuery
  * 
  * @author ssadedin@broadinstitute.org
  */
-@Log
 class FindNovelBreakpoints extends DefaultActor {
+    
+    static Logger log = Logger.getLogger("FindNovelBreakpoints")
     
     /**
      * Options - could be Map or OptionAccessor
