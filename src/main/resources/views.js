@@ -688,8 +688,11 @@ Vue.component('BreakpointsView', {
             if(breakpointCount > 0) {
                 console.log('Displaying ' + breakpointCount + ' breakpoints')
                 
-                if(this.breakpointTable)
+                let oldSearchText = null;
+                if(this.breakpointTable) {
+                    oldSearchText = $('#breakpoint-table_filter input')[0].value;
                     this.breakpointTable.destroy()
+                }
                 
                 this.breakpointTable = $('#breakpoint-table').DataTable( {
                     data: this.breakpoints,
@@ -700,10 +703,17 @@ Vue.component('BreakpointsView', {
                 } );
                 
                 $('#breakpoint-table').css('width','100%')
+                
+                if(oldSearchText) {
+                    this.breakpointTable.search(oldSearchText).draw()
+                    $('#breakpoint-table_filter input')[0].value = oldSearchText
+                }
             }
             else {
                 $('#breakpoint-table tbody').html('<tr><td>No breakpoints</td></tr>')
             }
+            
+
 //            else {
 //                $('#breakpoints-table').html('Data is still loading ...');
 //            }
@@ -907,6 +917,12 @@ Vue.component('BreakpointsView', {
             
             this.breakpoints = model.breakpoints.breakpoints.filter(this.filterBreakpoint.bind(this,excluded_samples,distThreshold)) 
             console.log("There are now "+ self.breakpoints.length + " filtered breakpoints")
+            
+            window.model.obs_filter_threshold = this.obs_filter_threshold
+            window.model.sample_count_filter_threshold = this.sample_count_filter_threshold
+            window.model.gene_proximity = this.gene_proximity
+            
+            window.model.save()
         },
         
         updateObsFilter : function() {
@@ -928,6 +944,7 @@ Vue.component('BreakpointsView', {
         },
         configClose: function() {
             model.geneList = _.indexBy(this.geneList.split(' ').map(x => { return { gene: x.trim(), lists: ['Priority'] }}), x => x.gene )
+            model.defaultBamFilePrefix = this.bamFilePrefix
             model.save()
         }
     },

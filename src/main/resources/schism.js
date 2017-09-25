@@ -73,7 +73,7 @@ function loadAndCall(srcs, fn) {
 
 var components = {};
 
-var config = {
+var createConfig = function() { return {
     content: [
         {
             type: 'column',
@@ -88,13 +88,17 @@ var config = {
                                 type: 'component',
                                 title: 'Breakpoints',
                                 componentName: 'BreakpointsView',
-                                componentState: { }
+                                componentState: { 
+                                    obs_filter_threshold: window.model.obs_filter_threshold, 
+                                    sample_count_filter_threshold: window.model.sample_count_filter_threshold, 
+                                    gene_proximity: window.model.gene_proximity
+                                }
                             }]
                         }]
                 } // Note: after this will be added breakpoint detail views
         ]
   }]
-};
+}};
 
 function getMainColumn() {
    return window.layout.root.contentItems[0]; 
@@ -190,6 +194,9 @@ $(document).ready(function() {
     window.model = {
         breakpoints : new Breakpoints({dataFiles: breakpoint_srcs}),
         defaultBamFilePrefix : null,
+        obs_filter_threshold: 3,
+        sample_count_filter_threshold: 10,
+        gene_proximity: 'none',
         genes: [],
         id: location.host + ':' + location.pathname,
         tags: {},
@@ -200,7 +207,11 @@ $(document).ready(function() {
             store.set('schism-'+model.id, {
                 tags: window.model.tags,
                 greyed: window.model.greyed,
-                geneList: window.model.geneList
+                geneList: window.model.geneList,
+                obs_filter_threshold: window.model.obs_filter_threshold,
+                sample_count_filter_threshold: window.model.sample_count_filter_threshold,
+                gene_proximity: window.model.gene_proximity,
+                defaultBamFilePrefix : model.defaultBamFilePrefix,
             })
         },
         load: function() {
@@ -212,7 +223,7 @@ $(document).ready(function() {
     
     model.breakpoints.load()
     
-    layout = new GoldenLayout( config, $('#content')[0] );
+    layout = new GoldenLayout( createConfig(), $('#content')[0] );
     
     registerVueComponent('SummaryView')
     registerVueComponent('BreakpointsView')
