@@ -2,6 +2,8 @@ import java.nio.file.Files
 import java.text.NumberFormat;
 import java.util.stream.Stream
 
+import gngs.ProgressCounter
+import gngs.SAM
 import groovy.json.JsonOutput
 import groovy.sql.Sql
 import groovy.util.logging.Log

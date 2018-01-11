@@ -19,6 +19,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.SAM
 import groovyx.gpars.actor.DefaultActor
 import htsjdk.samtools.SAMFileHeader
 import htsjdk.samtools.SAMFileWriter

@@ -2,6 +2,11 @@
 import org.junit.BeforeClass;
 import org.junit.Test
 
+import gngs.Region
+import gngs.Regions
+import gngs.SAM
+import gngs.Utils
+
 class FindNovelBreakpointsTest {
     
     @BeforeClass

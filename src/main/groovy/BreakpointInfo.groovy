@@ -23,6 +23,9 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
+import gngs.Region
+import gngs.Regions
+
 @CompileStatic
 @AutoClone
 class BreakpointInfo {

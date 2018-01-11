@@ -19,6 +19,10 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.GRange
+import gngs.Region
+import gngs.Regions
+import gngs.XPos
 import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 

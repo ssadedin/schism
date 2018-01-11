@@ -31,6 +31,14 @@ import java.util.stream.Stream
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.codehaus.groovy.runtime.StackTraceUtils
 
+import gngs.BED
+import gngs.Cli
+import gngs.ProgressCounter
+import gngs.Region
+import gngs.Regions
+import gngs.SAM
+import gngs.Utils
+import gngs.XPos
 import graxxia.IntegerStats
 import graxxia.Stats
 

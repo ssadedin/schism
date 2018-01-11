@@ -19,6 +19,10 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.BED
+import gngs.Cli
+import gngs.Region
+import gngs.Utils
 import groovy.util.logging.Log
 import groovyx.gpars.GParsPool;;
 

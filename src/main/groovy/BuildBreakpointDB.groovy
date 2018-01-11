@@ -35,6 +35,11 @@ import com.j256.ormlite.support.ConnectionSource
 import com.j256.ormlite.support.DatabaseConnection;
 import com.j256.ormlite.table.TableUtils;
 
+import gngs.Cli
+import gngs.ProgressCounter
+import gngs.SAM
+import gngs.Utils
+import gngs.XPos
 import groovy.sql.Sql
 import groovy.transform.CompileStatic;
 import groovy.util.logging.Log

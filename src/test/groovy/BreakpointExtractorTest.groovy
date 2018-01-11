@@ -2,6 +2,9 @@ import static org.junit.Assert.*;
 
 import org.junit.Test
 
+import gngs.BED
+import gngs.Region
+import gngs.SAM
 import groovyx.gpars.actor.Actors
 import htsjdk.samtools.SAMRecord;;;
 

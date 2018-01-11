@@ -23,6 +23,13 @@ import java.util.logging.FileHandler
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import gngs.BED
+import gngs.Cli
+import gngs.Region
+import gngs.Regions
+import gngs.SAM
+import gngs.SimpleLogFormatter
+import gngs.Utils
 import groovy.sql.Sql
 import groovy.time.TimeCategory;
 import groovy.util.logging.Log

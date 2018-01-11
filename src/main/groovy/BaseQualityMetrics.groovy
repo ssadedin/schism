@@ -19,6 +19,10 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.Cli
+import gngs.ProgressCounter
+import gngs.Region
+import gngs.SAM
 import groovy.transform.CompileStatic
 import htsjdk.samtools.CigarElement;
 import htsjdk.samtools.SAMRecord

@@ -19,6 +19,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.XPos
 import groovy.transform.CompileStatic;
 import htsjdk.samtools.CigarElement
 import htsjdk.samtools.CigarOperator;

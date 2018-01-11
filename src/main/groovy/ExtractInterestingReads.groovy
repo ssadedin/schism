@@ -19,6 +19,9 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.Cli
+import gngs.Region
+import gngs.SAM
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log
 import groovyx.gpars.GParsPool;

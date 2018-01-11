@@ -19,6 +19,11 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.ProgressCounter
+import gngs.ReadWindow
+import gngs.Region
+import gngs.Regions
+import gngs.SAM
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log
 import groovyx.gpars.GParsPool;

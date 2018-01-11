@@ -21,6 +21,9 @@
 
 import java.util.logging.Logger;
 
+import gngs.Cli
+import gngs.ProgressCounter
+import gngs.Utils
 import groovy.sql.Sql
 import groovy.util.logging.Log;
 import groovyx.gpars.GParsPool;

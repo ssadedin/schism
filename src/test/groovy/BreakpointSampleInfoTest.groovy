@@ -3,6 +3,9 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord
 import org.junit.Test;
 
+import gngs.Region
+import gngs.SAM
+
 class BreakpointSampleInfoTest {
     
     SAM bam = new SAM("src/test/data/giab_one_del.bam")

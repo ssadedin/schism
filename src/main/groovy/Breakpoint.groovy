@@ -28,6 +28,7 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.DatabaseTable
 import com.j256.ormlite.table.TableUtils
 
+import gngs.XPos
 import groovy.transform.CompileStatic;
 import groovy.transform.ToString;
 import groovy.util.logging.Log4j;

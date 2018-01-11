@@ -2,6 +2,7 @@ import static org.junit.Assert.*;
 
 import org.junit.Test
 
+import gngs.SAM
 import htsjdk.samtools.SAMRecord;;
 
 class BreakpointAnnotatorTest {

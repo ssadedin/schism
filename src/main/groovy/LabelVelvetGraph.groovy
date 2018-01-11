@@ -21,6 +21,10 @@
 
 import com.xlson.groovycsv.PropertyMapper;
 
+import gngs.Cli
+import gngs.Region
+import gngs.RegionComparator
+
 class LabelVelvetGraph {
     
     OptionAccessor options

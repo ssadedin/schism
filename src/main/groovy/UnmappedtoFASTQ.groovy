@@ -23,6 +23,9 @@ import groovy.transform.CompileStatic
 import htsjdk.samtools.SAMRecord
 import java.util.zip.GZIPOutputStream
 
+import gngs.Cli
+import gngs.ProgressCounter
+import gngs.SAM
 import graxxia.IntegerStats;
 
 /**
