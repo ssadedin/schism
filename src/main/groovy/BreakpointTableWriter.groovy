@@ -3,6 +3,7 @@ import java.text.NumberFormat;
 import java.util.stream.Stream
 
 import gngs.ProgressCounter
+import gngs.RefGenes
 import gngs.SAM
 import groovy.json.JsonOutput
 import groovy.sql.Sql

@@ -37,6 +37,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
+import gngs.FASTA
 import gngs.XPos
 
 //import Long as BreakpointId

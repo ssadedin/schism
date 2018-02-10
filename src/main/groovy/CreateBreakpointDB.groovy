@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 
 import gngs.BED
 import gngs.Cli
+import gngs.FASTA
 import gngs.Region
 import gngs.Regions
 import gngs.SAM

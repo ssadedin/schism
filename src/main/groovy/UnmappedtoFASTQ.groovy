@@ -24,6 +24,8 @@ import htsjdk.samtools.SAMRecord
 import java.util.zip.GZIPOutputStream
 
 import gngs.Cli
+import gngs.FASTA
+import gngs.FASTQRead
 import gngs.ProgressCounter
 import gngs.SAM
 import graxxia.IntegerStats;

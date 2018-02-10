@@ -33,7 +33,9 @@ import org.codehaus.groovy.runtime.StackTraceUtils
 
 import gngs.BED
 import gngs.Cli
+import gngs.FASTA
 import gngs.ProgressCounter
+import gngs.RefGenes
 import gngs.Region
 import gngs.Regions
 import gngs.SAM
@@ -41,8 +43,6 @@ import gngs.Utils
 import gngs.XPos
 import graxxia.IntegerStats
 import graxxia.Stats
-
-import java.util.stream.SortedOps.AbstractDoubleSortingSink
 
 import groovy.json.JsonOutput
 import groovy.sql.Sql

@@ -1,3 +1,4 @@
+
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -23,6 +24,8 @@ import groovy.transform.AutoClone
 import groovy.transform.CompileStatic;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
+import gngs.FASTA
+import gngs.RefGenes
 import gngs.Region
 import gngs.Regions
 

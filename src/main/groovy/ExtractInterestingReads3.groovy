@@ -20,6 +20,7 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 import gngs.Cli
+import gngs.FASTA
 import gngs.ProgressCounter
 import gngs.Region
 import gngs.SAM

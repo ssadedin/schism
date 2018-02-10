@@ -25,6 +25,8 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;
 import java.util.logging.Logger
 
+import gngs.FASTA
+
 /**
  * Identifies reads that have potential to contain legitimate 
  * soft clipped regions.
