@@ -99,8 +99,8 @@ class CombineBreakpointDBs {
 
             outputDb.execute("attach '" + dbFile + "' as other;")
             outputDb.execute("""
-                insert into breakpoint_observation (id, bp_id, sample, obs, bases, consensus)
-                select NULL,bp_id,sample,obs,bases,consensus from other.breakpoint_observation
+                insert into breakpoint_observation (id, bp_id, sample, obs, bases, consensus,start_clips,end_clips)
+                select NULL,bp_id,sample,obs,bases,consensus,start_clips,end_clips from other.breakpoint_observation
             """)
             outputDb.execute("detach other;")
             
