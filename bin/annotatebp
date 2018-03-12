@@ -11,6 +11,6 @@ CP="$BASE/lib/*:$BASE/src/main/groovy"
 : ${SCHISM_REF:=""}
 
 JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
-$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy//BreakpointAnnotator \
+$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/BreakpointAnnotator \
        $*
 

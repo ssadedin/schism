@@ -11,6 +11,6 @@ CP="$BASE/lib/*:$BASE/src/main/groovy:$BASE/src/main/resources"
 : ${SCHISM_REF:=""}
 
 JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
-$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/FindNovelBreakpoints \
+$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/FindNovelBreakpoints \
        $*
 
