@@ -12,6 +12,6 @@ CP="$BASE/lib/*:$BASE/src/main/groovy:$BASE/src/main/resources"
 
 JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$REF" \
 
-$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/CombineBreakpointDBs \
+$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/CombineBreakpointDBs \
        $*
 
