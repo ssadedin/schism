@@ -1,6 +1,8 @@
 
 import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord
+import schism.BreakpointSampleInfo
+
 import org.junit.Test;
 
 import gngs.Region

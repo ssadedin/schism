@@ -7,6 +7,9 @@ import gngs.Region
 import gngs.SAM
 import groovyx.gpars.actor.Actors
 import htsjdk.samtools.SAMRecord;;;
+import schism.BreakpointExtractor
+import schism.BreakpointMessage
+import schism.WriteBreakpointDBActor
 
 
 class BreakpointExtractorTest {

@@ -6,6 +6,7 @@ import gngs.Region
 import gngs.Regions
 import gngs.SAM
 import gngs.Utils
+import schism.FindNovelBreakpoints
 
 class FindNovelBreakpointsTest {
     

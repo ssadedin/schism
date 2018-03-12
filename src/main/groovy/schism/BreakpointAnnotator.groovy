@@ -1,3 +1,4 @@
+package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -19,17 +20,9 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
-import groovy.transform.CompileStatic;
-import groovy.util.logging.Log
-import htsjdk.samtools.Cigar;
-import htsjdk.samtools.CigarElement
-import htsjdk.samtools.CigarOperator;
 import static htsjdk.samtools.CigarOperator.*;
-import htsjdk.samtools.SAMRecord
-import htsjdk.samtools.SamPairUtil;
 
 import org.apache.commons.math3.ml.clustering.CentroidCluster;
-import org.apache.commons.math3.ml.clustering.Cluster;
 import org.apache.commons.math3.ml.clustering.Clusterable
 import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer
 
@@ -39,6 +32,13 @@ import gngs.Region
 import gngs.SAM
 import gngs.Utils
 import graxxia.Stats
+import graxxia.TSV
+import groovy.transform.CompileStatic;
+import groovy.util.logging.Log
+import htsjdk.samtools.CigarElement
+import htsjdk.samtools.CigarOperator;
+import htsjdk.samtools.SAMRecord
+import htsjdk.samtools.SamPairUtil;
 
 
 /**

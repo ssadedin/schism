@@ -1,3 +1,4 @@
+package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -19,6 +20,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import gngs.Consensus
 import gngs.XPos
 import groovy.transform.CompileStatic;
 import htsjdk.samtools.CigarElement
@@ -27,6 +29,14 @@ import htsjdk.samtools.SAMRecord
 
 enum SoftClipDirection {
     FORWARD, REVERSE
+    
+    String encodeChar() {
+        this == SoftClipDirection.REVERSE ? 'r' : 'f'        
+    }
+    
+    static SoftClipDirection decodeChar(String value) {
+        value == 'r' ? SoftClipDirection.REVERSE : SoftClipDirection.FORWARD
+    }
 }
 
 @CompileStatic

@@ -4,6 +4,10 @@ import org.junit.Test
 
 import gngs.SAM
 import htsjdk.samtools.SAMRecord;;
+import schism.BreakpointAnnotator
+import schism.BreakpointFeatures
+import schism.ReadSupport
+import schism.SupportType
 
 class BreakpointAnnotatorTest {
     

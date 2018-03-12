@@ -1,3 +1,4 @@
+package schism
 import java.nio.file.Files
 import java.text.NumberFormat;
 import java.util.stream.Stream

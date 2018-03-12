@@ -1,3 +1,4 @@
+package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -21,6 +22,7 @@
 
 import com.xlson.groovycsv.PropertyMapper;
 
+import graxxia.TSV
 import gngs.Cli
 import gngs.Region
 import gngs.RegionComparator

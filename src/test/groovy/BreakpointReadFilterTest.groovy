@@ -1,6 +1,8 @@
 import static org.junit.Assert.*;
 
 import htsjdk.samtools.SAMRecord
+import schism.BreakpointReadFilter
+
 import org.junit.Test;
 
 class BreakpointReadFilterTest {

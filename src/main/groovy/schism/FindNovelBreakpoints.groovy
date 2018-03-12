@@ -1,3 +1,4 @@
+package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -34,6 +35,7 @@ import org.codehaus.groovy.runtime.StackTraceUtils
 import gngs.BED
 import gngs.Cli
 import gngs.FASTA
+import gngs.PrefixTrie
 import gngs.ProgressCounter
 import gngs.RefGenes
 import gngs.Region
@@ -134,6 +136,9 @@ class FindNovelBreakpoints extends DefaultActor {
         this.databaseSet = databaseSet
     }
     
+    FindNovelBreakpoints() {
+    }
+    
     /**
      * Aysynchronous callback to receive messages about discovered breakpoints
      */
@@ -192,29 +197,8 @@ class FindNovelBreakpoints extends DefaultActor {
                 verbose = true
             }
             
-            
             // Index this breakpoint
-            if(reference) {
-                String [] reference = bpInfo.queryReference(reference, softClipSize)
-                
-                // If opposite side of breakpoint is entirely homopolymer sequence 
-                // then ignore this breakpoint - while such breakpoints could be real, 
-                // in practice they are nearly always sequencing or mapping artefacts caused by the
-                // homopolymer run
-                if(isAllSameBase(reference[1]) || isAllSameBase(reference[0])) {
-                    log.info "Breakpoint $bpId is adjacent to homopolymer sequence: ignoring due to low complexity / unknown reference"
-                    return
-                }
-                
-                if(hasAdjacentNBases(reference)) {
-                    log.info "Breakpoint $bpId is adjacent to unknown sequence: ignoring"
-                    return
-                }
-
-                indexBreakpoint(bpInfo, reference, verbose)
-            }
-            ++nonFiltered 
-            breakpoints.add(bpInfo)
+            addBreakpoint(bpInfo, verbose)
         }
         catch(Exception e) {
             ++errorCount
@@ -222,6 +206,32 @@ class FindNovelBreakpoints extends DefaultActor {
             if(errorCount < 3)
                 log.log(Level.SEVERE, "Failed to add breakpoint at $msg.chr:$msg.pos: ", e)
         }
+    }
+
+    @CompileStatic
+    void addBreakpoint(BreakpointInfo bpInfo, boolean verbose) {
+        long bpId = bpInfo.id
+        if(reference) {
+            String [] reference = bpInfo.queryReference(reference, softClipSize)
+
+            // If opposite side of breakpoint is entirely homopolymer sequence
+            // then ignore this breakpoint - while such breakpoints could be real,
+            // in practice they are nearly always sequencing or mapping artefacts caused by the
+            // homopolymer run
+            if(isAllSameBase(reference[1]) || isAllSameBase(reference[0])) {
+                log.info "Breakpoint $bpId is adjacent to homopolymer sequence: ignoring due to low complexity / unknown reference"
+                return
+            }
+
+            if(hasAdjacentNBases(reference)) {
+                log.info "Breakpoint $bpId is adjacent to unknown sequence: ignoring"
+                return
+            }
+
+            indexBreakpoint(bpInfo, reference, verbose)
+        }
+        ++nonFiltered
+        breakpoints.add(bpInfo)
     }
     
     @CompileStatic
@@ -252,9 +262,10 @@ class FindNovelBreakpoints extends DefaultActor {
         int offset = 1
         int start = 0
         
-        if(obs.direction == SoftClipDirection.REVERSE) {
-            start = opposingReference.size() - indexLength - partnerIndexBases + 1;
-        }
+//        if(obs.direction == SoftClipDirection.REVERSE) {
+//            assert false // I don't believe this code ever executes, because direction is never set
+//            start = opposingReference.size() - indexLength - partnerIndexBases + 1;
+//        }
         
         int end = partnerIndexBases+1
         

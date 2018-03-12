@@ -1,3 +1,4 @@
+package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -187,12 +188,12 @@ class WriteBreakpointDBActor extends DefaultActor {
         """
             
         String insertBreakpointObservation = """
-          insert into breakpoint_observation (id, bp_id, sample, obs, bases, consensus)
-          values (NULL, ?, ?, ?, ?, ?)
+          insert into breakpoint_observation (id, bp_id, sample, obs, start_clips, end_clips, bases, consensus)
+          values (NULL, ?, ?, ?, ?, ?, ?, ?)
         """
         db.withBatch(bp.observations.size(), insertBreakpointObservation) { BatchingPreparedStatementWrapper stmt ->
             for(BreakpointSampleInfo bpObs in bp.observations) {
-                stmt.addBatch((List<Object>)[bp.id, bpObs.sample, bpObs.obs, bpObs.bases, bpObs.consensusScore])
+                stmt.addBatch((List<Object>)[bp.id, bpObs.sample, bpObs.obs, bpObs.startClips, bpObs.endClips, bpObs.bases, bpObs.consensusScore])
             }
         }
         
@@ -257,6 +258,8 @@ class WriteBreakpointDBActor extends DefaultActor {
                                                        bp_id BIGINT NOT NULL, 
                                                        sample VARCHAR NOT NULL,
                                                        obs INTEGER NOT NULL,
+                                                       start_clips INTEGER NOT NULL,
+                                                       end_clips INTEGER NOT NULL,
                                                        bases VARCHAR,
                                                        consensus REAL);
             """)

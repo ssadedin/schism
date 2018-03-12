@@ -4,6 +4,9 @@ import org.junit.Test
 
 import gngs.FASTA
 import gngs.XPos
+import schism.BreakpointInfo
+import schism.BreakpointSampleInfo
+import schism.SoftClipDirection
 
 class BreakpointInfoTest {
 
