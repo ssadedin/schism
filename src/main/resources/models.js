@@ -21,7 +21,7 @@ class Breakpoints {
         loadAndCall(this.dataFiles, (bps) => {
             console.log("Loaded " + bps.length + " breakpoints");
             
-            let genes = window.genes;
+            let genes = window.model.genes;
             
             // add a 'gene' attribute to every exon (not sure why?)
             Object.keys(genes).forEach(g => genes[g].exons.forEach(e => e.gene = g))
