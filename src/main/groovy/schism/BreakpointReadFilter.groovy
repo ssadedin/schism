@@ -62,7 +62,7 @@ class BreakpointReadFilter {
     String debugRead // = "1335"
     
     // ----------  Parameters controlling filtering
-    int minSoftClippedBases = 20
+    int minSoftClippedBases = 15
     int maxInsertSize = 100000
     int minNonScBases = 22
     
