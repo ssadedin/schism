@@ -19,6 +19,7 @@ package schism
 // along with Schism.  If not, see <http://www.gnu.org/licenses/>.
 //
 /////////////////////////////////////////////////////////////////////////////////
+package schism
 
 import java.util.logging.FileHandler
 import java.util.logging.Level;
@@ -35,7 +36,7 @@ import gngs.Utils
 import groovy.sql.Sql
 import groovy.time.TimeCategory;
 import groovy.util.logging.Log
-import groovyx.gpars.GParsPool;;
+import groovyx.gpars.GParsPool;
 
 /**
  * My 3rd attempt at writing a scalable, efficient breakpoint database creator
