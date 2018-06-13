@@ -1,4 +1,3 @@
-package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -20,16 +19,11 @@ package schism
 //
 /////////////////////////////////////////////////////////////////////////////////
 
-import java.awt.AttributeValue
-import java.beans.beancontext.BeanContextServiceProviderBeanInfo
-import java.nio.file.Files
-import java.text.NumberFormat;
-import java.util.concurrent.atomic.DoubleAdder
+package schism
+
 import java.util.logging.Level
 import java.util.logging.Logger
-import java.util.stream.Stream
 
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 import org.codehaus.groovy.runtime.StackTraceUtils
 
 import gngs.BED
@@ -44,16 +38,9 @@ import gngs.SAM
 import gngs.Utils
 import gngs.XPos
 import graxxia.IntegerStats
-import graxxia.Stats
-
-import groovy.json.JsonOutput
-import groovy.sql.Sql
 import groovy.transform.CompileStatic
-import groovy.util.logging.Log;
 import groovyx.gpars.GParsPool
 import groovyx.gpars.actor.DefaultActor
-import htsjdk.samtools.CigarElement
-import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMRecord;;
 import trie.TrieNode
 import trie.TrieQuery
