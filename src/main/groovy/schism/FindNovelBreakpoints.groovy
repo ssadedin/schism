@@ -907,7 +907,8 @@ class FindNovelBreakpoints extends DefaultActor {
         
         regions = addGeneRegions(refGene, opts,regions)
         
-        log.info "Resolved ${regions.numberOfRanges} regions (${regions.size()}bp) after adding genes"
+        if(regions)
+            log.info "Resolved ${regions.numberOfRanges} regions (${regions.size()}bp) after adding genes"
         
         if(regions != null && opts.pad) {
             int padding = opts.pad.toInteger()
