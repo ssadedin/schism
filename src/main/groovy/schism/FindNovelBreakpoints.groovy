@@ -546,7 +546,7 @@ class FindNovelBreakpoints extends DefaultActor {
             for(BreakpointSampleInfo obs in bp.observations) {
                 for(Long xpos in obs.mateXPos) {
                     Region r = XPos.parsePos(xpos)
-                    if(!r.isMinorContig()) {
+                    if(!r.isMinorContig() && (r.chr != 'Unk')) {
                         bpMates.addRegion(new Region(r.chr, r.from-150, r.to+150))
                     }
                 }
