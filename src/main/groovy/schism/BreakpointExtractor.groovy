@@ -34,6 +34,7 @@ import htsjdk.samtools.CigarOperator;
 import htsjdk.samtools.SAMFileWriter
 import htsjdk.samtools.SAMRecord
 import htsjdk.samtools.SAMRecordIterator;
+import java.util.logging.Logger
 
 @CompileStatic
 @Log
@@ -151,8 +152,9 @@ class WindowStatistics {
     }
 }
 
-@Log
 class BreakpointExtractor {
+    
+    final static Logger log = Logger.getLogger('BreakpointExtractor')
     
     static final int READ_WINDOW_SIZE = 500
     
