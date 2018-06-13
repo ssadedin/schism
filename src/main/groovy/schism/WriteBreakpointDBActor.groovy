@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
 import gngs.FASTA
+import gngs.SAM
 import gngs.XPos
 
 //import Long as BreakpointId
@@ -107,6 +108,10 @@ class WriteBreakpointDBActor extends DefaultActor {
                 else
                 if(msg == "flush") {
                     flush()
+                }
+                else
+                if(msg instanceof Map) {
+                    saveSamples(msg.bams)
                 }
             }
         }
@@ -200,6 +205,15 @@ class WriteBreakpointDBActor extends DefaultActor {
         ++countWritten
     }
     
+    void saveSamples(List<SAM> bams) {
+        log.info "Saving sample information from ${bams.size()} bams ..."
+        for(SAM bam in bams) {
+            db.execute """
+                insert into sample (id, source) values (${bam.samples[0]}, ${bam.samFile.absolutePath})
+            """
+        }
+    }
+    
     /**
      * Write all remaining breakpoints to db and clear breakpoint tracking info
      */
@@ -264,7 +278,14 @@ class WriteBreakpointDBActor extends DefaultActor {
                                                        consensus REAL);
             """)
         
-        
+        db.execute("""
+                  CREATE TABLE sample (
+                    id VARCHAR PRIMARY KEY,
+                    source VARCHAR,
+                    sex VARCHAR
+                  );
+            """)
+         
         return db
     }
     

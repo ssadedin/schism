@@ -120,12 +120,13 @@ class CreateBreakpointDB {
         dbWriter.start()
         dbWriter.send "init"
         
+        dbWriter.send([bams: bams])
+        
         String adapterSeq = opts.adapter ?: null
         
         List breakpointExtractors = scanBAMRegions(regions, concurrency, bams, dbWriter, filterLog, opts.v, retries, adapterSeq, samples)
         
         dbWriter.send("end")
-        
         log.info("Waiting for db writer to finalize")
         
         dbWriter.join()
