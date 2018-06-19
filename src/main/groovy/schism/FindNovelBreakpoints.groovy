@@ -98,6 +98,8 @@ class FindNovelBreakpoints extends DefaultActor {
      * Set to true while running, then false after the "end" message is processed
      */
     String phase = "none"
+    
+    BreakpointConnector breakpointConnector 
 	
     /**
      * Create a breakpoint finder based on the given options
@@ -121,6 +123,14 @@ class FindNovelBreakpoints extends DefaultActor {
         this.sample = bam.samples[0]
         
         this.databaseSet = databaseSet
+        
+        this.breakpointConnector = 
+            new BreakpointConnector(
+                maxPartnersForOutput: maxPartnersForOutput,  
+                partnerIndexBases: partnerIndexBases, 
+                softClipSize: softClipSize, 
+                maxPartnersToJoin: maxPartnersToJoin
+            )
     }
     
     FindNovelBreakpoints() {
@@ -163,14 +173,22 @@ class FindNovelBreakpoints extends DefaultActor {
     
     int errorCount = 0
     
+    private final static long debugPos = 101791685
+//    private final static long debugPos = 101791695
+    
     void processBreakpoint(BreakpointMessage msg) {
         ++total
-          
+        
+        boolean verbose = false
+        if(msg.pos == debugPos) {
+            println "Debug breakpoint: $msg"
+            verbose = true
+        }
+            
         int freq = isFiltered(msg)
         if(freq < 0)
             return
             
-        boolean verbose = false
         try {
             Long bpId = XPos.computePos(msg.chr, msg.pos)
             
@@ -178,11 +196,6 @@ class FindNovelBreakpoints extends DefaultActor {
     
             // Check if any other breakpoint ties to this one
             bpInfo.add(msg)
-            
-            if(bpInfo.pos == 40285945 || bpInfo.pos == 23812754) {
-                println "Debug breakpoint: $bpInfo"
-                verbose = true
-            }
             
             // Index this breakpoint
             addBreakpoint(bpInfo, verbose)
@@ -194,7 +207,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 log.log(Level.SEVERE, "Failed to add breakpoint at $msg.chr:$msg.pos: ", e)
         }
     }
-
+    
     @CompileStatic
     void addBreakpoint(BreakpointInfo bpInfo, boolean verbose) {
         long bpId = bpInfo.id
@@ -215,7 +228,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 return
             }
 
-            indexBreakpoint(bpInfo, reference, verbose)
+            breakpointConnector.indexBreakpoint(bpInfo, reference, verbose)
         }
         ++nonFiltered
         breakpoints.add(bpInfo)
@@ -235,41 +248,6 @@ class FindNovelBreakpoints extends DefaultActor {
                 return false
         }
         return true
-    }
-    
-    @CompileStatic
-    void indexBreakpoint(BreakpointInfo bpInfo, String [] reference, boolean verbose) {
-        String opposingReference = reference[0]
-        
-        
-        if(verbose)
-            log.info "Indexing opposing reference for $bpInfo.id: " + opposingReference
-            
-        BreakpointSampleInfo obs = bpInfo.observations[0]
-        int offset = 1
-        int start = 0
-        
-//        if(obs.direction == SoftClipDirection.REVERSE) {
-//            assert false // I don't believe this code ever executes, because direction is never set
-//            start = opposingReference.size() - indexLength - partnerIndexBases + 1;
-//        }
-        
-        int end = partnerIndexBases+1
-        
-        for(int i=start; i!=end; i+=offset) {
-            String indexKey = opposingReference.substring(i, i+indexLength)
-            if(verbose)
-                log.info "Adding indexed ref seq " + indexKey
-            breakpointPartners[indexKey] = bpInfo
-        }
-        
-        if(verbose) {
-            log.info "index forward $bpInfo.id: " + opposingReference.take(softClipSize)
-            log.info "index reverse $bpInfo.id: " + (String)opposingReference.take(softClipSize).reverse()
-        }
-        
-        breakpointSequenceIndex.add((String)opposingReference.take(softClipSize), bpInfo)
-        breakpointSequenceIndex.add((String)opposingReference.take(softClipSize).reverse(), bpInfo)
     }
     
     /**
@@ -317,154 +295,6 @@ class FindNovelBreakpoints extends DefaultActor {
         return freq
     }
     
-    Set<String> commonPartners = new HashSet(1000)
-    
-    @CompileStatic
-    void partnerBreakpoints() {
-        List<BreakpointInfo> outputBreakpoints = new ArrayList(breakpoints.size())
-        for(BreakpointInfo bp in breakpoints) {
-            
-            boolean verbose = false
-//            if(bp.pos == 15460789 || bp.pos == 15461865) {
-//                println "Debug breakpoint: $bp with bases: " + bp.observations[0].bases
-//                verbose = true
-//                trie.TrieNode.verbose = true
-//            }
-
-            // if there is a consensus among the soft clip, check if there is a partner sequence
-            // inthe database
-            BreakpointInfo partner = null
-            BreakpointSampleInfo bpsi = bp.observations[0]
-            if(bpsi.consensusScore > 10.0) { // a bit arbitrary
-               
-                // Note we search for 1 bp less than the soft clip size because we are allowing for
-                // a single bp deletion. If our query has a deletion, then our query is effectively 
-                // one base longer which won't be in the prefix trie. This would force the trie to 
-                // cost it as an insertion which we do not want to do
-                String forwardSequence = (String)bpsi.bases.take(softClipSize-1)
-                String reverseSequence = (String)bpsi.bases.reverse().take(softClipSize-1)
-                String reverseComplement = FASTA.reverseComplement(bpsi.bases).take(softClipSize-1)
-                
-                if(forwardSequence in commonPartners) {
-                    log.info "$bp has Recurrent common partner sequence $forwardSequence"
-                    continue
-                }
-                
-                if(verbose)
-                     log.info "Searching forward for $forwardSequence (bp=$bp.id)"
-                List<TrieQuery<BreakpointInfo>> forwardPartners = breakpointSequenceIndex.query(forwardSequence, 1,1,1,5)
-                
-                if(verbose)
-                     log.info "Searching reverse for $reverseSequence (bp=$bp.id)"
-                List<TrieQuery<BreakpointInfo>> reversePartners = breakpointSequenceIndex.query(reverseSequence, 1,1,1,5)
-                
-                List<TrieQuery<BreakpointInfo>> reverseComplementPartners = breakpointSequenceIndex.query(reverseComplement, 1,1,1,5) 
-                if(verbose)
-                     log.info "Searching reverse complement: $reverseComplement (bp=$bp.id) finds " + reverseComplementPartners.size() + " with costs " + 
-                              reverseComplementPartners.collect { TrieQuery q -> q.cost(TrieNode.DEFAULT_COSTS) }.join(',')
-                              
-                List<TrieQuery> allPartners = forwardPartners + reversePartners + reverseComplementPartners
-                
-                List<TrieQuery<BreakpointInfo>> partnerQueries = (allPartners).grep { TrieQuery q ->
-                    q.cost(TrieNode.DEFAULT_COSTS) < 5.0
-                }
-                
-                if(partnerQueries.size()>this.maxPartnersToJoin) {
-                    log.info "Too many partners (${partnerQueries.size()}) to link $bp based on $forwardSequence"
-                    commonPartners.add(forwardSequence)
-                    commonPartners.add(reverseSequence)
-                    commonPartners.add(reverseComplement)
-                }
-                else {
-                    
-                    chooseBestPartner(bp, bpsi, partnerQueries)
-                    if(bpsi.partner)
-                        ++partnered
-                }
-            }
-            trie.TrieNode.verbose = false
-            
-//            if(partners!=null && partners.size()> maxPartnersForOutput) {
-//                log.info "$bp has too many partners: ignoring"
-//                ++tooPromiscuous
-//            }
-//            else
-//            {
-                outputBreakpoints.add(bp)
-//            }
-              this.breakpoints = outputBreakpoints;
-        }
-    }
-    
-    /**
-     * Choose the best partner from among the given list of queries for partners based
-     * on overlap of breakpoint sequence.
-     * 
-     * @param bp
-     * @param bpsi
-     * @param partnerQueries
-     */
-    void chooseBestPartner(BreakpointInfo bp, BreakpointSampleInfo bpsi, List<TrieQuery<BreakpointInfo>> partnerQueries) {
-        
-        if(partnerQueries.isEmpty())
-            return
-        
-        partnerQueries = partnerQueries.sort { TrieQuery q ->
-            q.cost(TrieNode.DEFAULT_COSTS)
-        }
-
-        int lowestCost = (int) partnerQueries[0].cost(TrieNode.DEFAULT_COSTS)
-
-        partnerQueries = partnerQueries.takeWhile { TrieQuery q ->
-            (int)q.cost(TrieNode.DEFAULT_COSTS) == lowestCost
-        }
-
-        List<BreakpointInfo> partners = (List<BreakpointInfo>)partnerQueries.collect { TrieQuery<BreakpointInfo> q ->
-            q.result
-        }.flatten()
-        .grep { BreakpointInfo p -> bp.id != p.id }
-        
-        log.info "Found ${partners.size()} equal partners for $bp starting with: ${partners.take(2).join(',')}"
-        if(partners.isEmpty())
-            return
-
-        if(partners.size() == 1)
-            bpsi.partner = partners[0]
-        else
-            chooseBetweenEqualCostPartners(bp, bpsi, partners)
-    }
-    
-    /**
-     * Choose the best partner from a list of partners who have equally well matching 
-     * sequence at their breakpoints.
-     * 
-     * @param bpsi
-     * @param partners
-     */
-    void chooseBetweenEqualCostPartners(BreakpointInfo bp, BreakpointSampleInfo bpsi, List<BreakpointInfo> partners) {
-        
-        // If any partner already points back to us, partner with them
-        BreakpointInfo reciprocalPartner = partners.find { BreakpointInfo p -> p.observations[0].partner?.id == bp.id }
-        if(reciprocalPartner) {
-            log.info "Partnered $bp.id to reciprical breakpoint $reciprocalPartner"
-            bpsi.partner = reciprocalPartner
-        }
-        else {
-            // Of all the partners with equal score on the same chromosome, take the closest
-            bpsi.partner = partners.grep { BreakpointInfo p -> p.chr == bp.chr }?.min { BreakpointInfo partnerBp ->
-                Math.abs(partnerBp.id - bp.id)
-            }
-                            
-            if(bpsi.partner) {
-                log.info "Partnered $bp.id to closest on same chromosome: $bpsi.partner"
-            }
-            else {
-                log.info "Partnered $bp.id to minimum cost match on other chr: " + partners[0].id
-                bpsi.partner = partners[0]
-            }
-        }
-    }
-    
     /**
      * Run the analysis for the configured BAM file over the given regions.
      */
@@ -506,7 +336,7 @@ class FindNovelBreakpoints extends DefaultActor {
         }
         
         log.info "Partnering ${breakpoints.size()} breakpoints ..."
-        this.partnerBreakpoints()
+        this.breakpointConnector.partnerBreakpoints()
         
         log.info "Searching for extended regions in $bam.samFile ..."
         Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
@@ -520,6 +350,12 @@ class FindNovelBreakpoints extends DefaultActor {
     void runOverRegions(Iterable<Region> includedRegions) {
         for(region in includedRegions) {
             def bpe = new BreakpointExtractor(bam, allowMultiSample: options.multi)
+            if(this.options.debugpos)
+                bpe.debugPosition = this.options.debugpos.toInteger()
+                
+            if(this.options.debugread)
+                bpe.debugRead = this.options.debugread
+                
             bpe.breakpointListener = this
             if(options.adapter) 
                 bpe.filter.setAdapterSequence(options.adapter)
@@ -634,6 +470,8 @@ class FindNovelBreakpoints extends DefaultActor {
             mask 'BED file containing regions to intersect scan regions with', args:1, required:false
             bed 'Write out a BED file containing regions of breakpoints found (100bp padding)', args:1, required:false
             multi 'Allow multi sample BAM file (treat as single)', required:false
+            debugpos 'Specify a position to write verbose informationa about', args:1, required:false
+            debugread 'Specify a read to write verbose informationa about', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
@@ -894,13 +732,21 @@ class FindNovelBreakpoints extends DefaultActor {
             regions = new Regions()
             
             for(regionValue in opts.regions) {
+                log.info "Adding region: $regionValue"
                 Region region = null
                 if(opts.region.contains(":"))
                     region = new Region(regionValue)
                 else {
-                    region = new Region(regionValue, 0..bam.contigs[opts.region])
+                    if(new File(regionValue).exists()) {
+                        Regions loadRegions = new BED(regionValue).load()
+                        loadRegions.each { regions.addRegion(it) }
+                    }
+                    else {
+                        region = new Region(regionValue, 0..bam.contigs[opts.region])
+                    }
                 }
-                regions.addRegion(region)
+                if(region)
+                    regions.addRegion(region)
                 log.info "Added region to scan: $region"
             }
         }

@@ -1,4 +1,3 @@
-package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -19,6 +18,7 @@ package schism
 // along with Schism.  If not, see <http://www.gnu.org/licenses/>.
 //
 /////////////////////////////////////////////////////////////////////////////////
+package schism
 
 import gngs.ProgressCounter
 import gngs.ReadWindow
@@ -35,122 +35,6 @@ import htsjdk.samtools.SAMFileWriter
 import htsjdk.samtools.SAMRecord
 import htsjdk.samtools.SAMRecordIterator;
 import java.util.logging.Logger
-
-@CompileStatic
-@Log
-class NoiseState {
-    
-    Region over = null
-    
-    Regions noisyRegions = new Regions()
-    
-    int softClipNoiseThreshold = 200 
-    
-    int maxBreakpointsInWindow = 100
-       
-    int start = -1
-    
-    int end = -1
-    
-    boolean update(WindowStatistics windowStats, ReadWindow window) {
-        if(this.isNoisy(windowStats,window)) {
-            noisy(window.pos)
-            return true
-        }
-        else {
-            clean()
-            return false
-        }
-    }
-    
-    void noisy(int pos) {
-        if(start < 0)
-            start = pos
-        end = pos
-    }
-    
-    void clean() {
-        if(start >= 0) {
-            if(end<0)
-                end = start+1
-            noisyRegions.addRegion(new Region(over.chr, start..end))
-            start = -1
-            end = -1
-        }
-    }
-    
-    /**
-     * Return true if the region of the window is considered "noisy".
-     *
-     * Noise is measured by
-     *
-     * <li> total number of reads containing soft clipping within the window
-     * <li> toal number of positions that have reads containing soft clipping
-     */
-    @CompileStatic
-    boolean isNoisy(WindowStatistics windowStats, ReadWindow window) {
-      if(windowStats.softClipped > this.softClipNoiseThreshold) {
-          true
-      }
-      else {
-          int readsAtPos = window.window[window.pos]?.size()?:0
-          int bpInWindow = window.window.count { it.value.size() > 1 } - readsAtPos
-          return bpInWindow > maxBreakpointsInWindow
-      }
-    }
-}
-
-@Log
-class WindowStatistics {
-    
-    int halfWindowSize = 0
-    
-    WindowStatistics(int windowSize) {
-        this.halfWindowSize = windowSize / 2
-    }
-    
-    int softClipped = 0
-    
-    int startPosition = 0
-    
-    @CompileStatic
-    void update(ReadWindow readWindow) {
-        
-        int pos = readWindow.pos
-        
-        TreeMap<Integer, List<SAMRecord>> window = readWindow.window
-        
-        int before = softClipped
-        
-        // Add the soft clipped reads from the leading edge, subtract from trailing edge
-        int trailingEdge = pos - halfWindowSize + 2
-        List<SAMRecord> trailingReads = window[trailingEdge]
-        if(trailingEdge > startPosition && trailingReads) {
-            softClipped -= trailingReads.size()
-//            log.info "$pos: Removing ${trailingReads*.readName} from noise"
-        }
-                
-        int leadingEdge = pos + halfWindowSize -1
-        List<SAMRecord> leadingReads = window[leadingEdge]
-        if(leadingEdge>startPosition && leadingReads) {
-//            log.info "$pos: Adding ${leadingReads*.readName} from noise"
-            softClipped += leadingReads.size()
-        }
-        
-//        String debugRead = "H23LJCCXX150122:2:1123:10967:46367"
-            
-        if(before != softClipped)
-//        log.info "Noise at $pos ($trailingEdge - $leadingEdge) = $softClipped -${trailingReads?.size()} +${leadingReads?.size()} debugRead at " + 
-//            ((window.find { e -> e.value.find { it.readName == debugRead } != null }?.key?:0) - trailingEdge)
-            
-//        if(pos < startPosition && softClipped<0)
-//            softClipped = 0
-
-        if(softClipped<0)
-            softClipped=0
-        assert softClipped >= 0
-    }
-}
 
 class BreakpointExtractor {
     
@@ -192,9 +76,9 @@ class BreakpointExtractor {
      */
     boolean dedupeReads = true
     
-    String debugRead = null
+    String debugRead = "H3G5FCCXY170923:8:1118:28321:6987"
     
-    int debugPosition = -1
+    int debugPosition = 101791685
     
     SAM bam = null
     
@@ -294,7 +178,21 @@ class BreakpointExtractor {
             windowStats.update(readWindow)
                  
             List<SAMRecord> reads = window[pos]
+            
+            if(reads?.any { it.readName == debugRead }) {
+                log.info "DEBUG READ AT POS: " + pos
+            }
+            
             if(noiseState.update(windowStats, readWindow)) {
+                if(pos == debugPosition) {
+                    log.info "Debug position $pos is excluded by noise: " + noiseState + " window = " + readWindow
+                    log.info "Excluding reads are: "
+                    readWindow.window.grep { Map.Entry e -> ((List)e.value).size()>1}.collect { entry ->
+                        Map.Entry e = (Map.Entry)entry
+                        List<SAMRecord> noiseReads = (List<SAMRecord>)e.value
+                        log.info "Reads: " + noiseReads*.readName
+                    }
+                }
                 ++countNoisy
                 return
             }

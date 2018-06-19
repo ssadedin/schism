@@ -59,7 +59,7 @@ class BreakpointReadFilter {
     
     boolean ignoreChimeric = false
     
-    String debugRead // = "1335"
+    String debugRead = "H3G5FCCXY170923:8:1118:28321:6987"
     
     // ----------  Parameters controlling filtering
     int minSoftClippedBases = 15
@@ -74,11 +74,11 @@ class BreakpointReadFilter {
     /**
      * Useful metrics we can log
      */
-    int countAnomalous = 0
-    int countChimeric = 0
-    int countLowQual = 0
-    int countAdapter = 0
-    int countContam = 0    
+    public int countAnomalous = 0
+    public int countChimeric = 0
+    public int countLowQual = 0
+    public int countAdapter = 0
+    public int countContam = 0    
     
     
     @CompileStatic
