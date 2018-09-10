@@ -341,13 +341,13 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Searching for extended regions in $bam.samFile ..."
         Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
         log.info "Processing ${extendedRegions.numberOfRanges} extended regions (${extendedRegions.size()}bp)"
-        runOverRegions(extendedRegions)
+        runOverRegions(extendedRegions, false)
         
         this.send "end"
         this.join()
     }
     
-    void runOverRegions(Iterable<Region> includedRegions) {
+    void runOverRegions(Iterable<Region> includedRegions, failHard=true) {
         for(region in includedRegions) {
             def bpe = new BreakpointExtractor(bam, allowMultiSample: options.multi)
             if(this.options.debugpos)
@@ -362,7 +362,16 @@ class FindNovelBreakpoints extends DefaultActor {
             if(options.minclip)
                 bpe.filter.minSoftClippedBases = options.minclip.toInteger()
                 
-            bpe.run(region)
+            try {
+                bpe.run(region)
+            } catch (Exception e) {
+                if(failHard) {
+                    throw e
+                }
+                else {
+                    log.warning "Failed to process region $region"
+                }
+            }
         }
     }
     
