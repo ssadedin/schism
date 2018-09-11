@@ -369,7 +369,7 @@ class FindNovelBreakpoints extends DefaultActor {
                     throw e
                 }
                 else {
-                    log.warning "Failed to process region $region"
+                    log.warning "Failed to process region $region: $e"
                 }
             }
         }
@@ -385,6 +385,8 @@ class FindNovelBreakpoints extends DefaultActor {
         Regions result = new Regions()
         
         for(BreakpointInfo bp in breakpoints) {
+            
+            String prefix = (bp.chr.startsWith('chr') ? 'chr' : '')
             
             // does the breakpoint have multiple reads linking to an unexplored region?
             Regions bpMates = new Regions()
@@ -405,7 +407,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 Region r = (Region)robj
                 if(!r.overlaps(existingRegions)) {
                     log.info "Found breakpoint mate region: $r for $bp"
-                    result.addRegion(r.chr, Math.max(0,r.from-500), r.to+500)
+                    result.addRegion(prefix + r.chr, Math.max(0,r.from-500), r.to+500)
                 }
             }
         }
