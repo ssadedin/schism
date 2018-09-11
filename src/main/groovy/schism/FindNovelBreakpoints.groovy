@@ -240,6 +240,13 @@ class FindNovelBreakpoints extends DefaultActor {
     
     @CompileStatic
     private static boolean isAllSameBase(String bases) {
+        
+        // TODO: Profile / optimize based on charAt(n)
+        double maxFracSameBase = bases.iterator().countBy { it }.max { it.value }.value / bases.size()
+        
+        return maxFracSameBase > 0.8
+        
+        
         final char firstBase = bases.charAt(0)
         final int numBases = bases.size()
         for(int i=1; i<numBases; ++i) {
