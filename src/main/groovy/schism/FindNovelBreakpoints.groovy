@@ -70,7 +70,6 @@ class FindNovelBreakpoints extends DefaultActor {
     int total = 0
     int nonFiltered = 0
     int tooCommon = 0
-    int partnered = 0
     int tooPromiscuous = 0
     int mapQ = 0
     
@@ -704,7 +703,7 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Common breakpoints: " + tooCommon
         log.info "Promiscuous breakpoints: " + tooCommon
         log.info "Reportable breakpoints: " + nonFiltered
-        log.info "Partnered breakpoints: " + partnered
+        log.info "Partnered breakpoints: " + breakpointConnector.partnered
         log.info("="*100)
     }
     
