@@ -481,6 +481,7 @@ class FindNovelBreakpoints extends DefaultActor {
             mask 'BED file containing regions to intersect scan regions with', args:1, required:false
             bed 'Write out a BED file containing regions of breakpoints found (100bp padding)', args:1, required:false
             multi 'Allow multi sample BAM file (treat as single)', required:false
+            idmask 'Regular expression to replace samples with first subexpression', args:1, required:false
             debugpos 'Specify a position to write verbose informationa about', args:1, required:false
             debugread 'Specify a read to write verbose informationa about', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false

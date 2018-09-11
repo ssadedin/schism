@@ -1,6 +1,7 @@
 package schism
 import java.nio.file.Files
 import java.text.NumberFormat;
+import java.util.regex.Pattern
 import java.util.stream.Stream
 
 import gngs.ProgressCounter
@@ -160,6 +161,8 @@ class BreakpointTableWriter {
             percFormat.format((double)(count+1)/(breakpointCount+1)) + " complete" 
         })
         
+        Pattern sampleIdMask = options.idmask == null ? null : Pattern.compile((String)options.idmask)
+        
         for(BreakpointInfo bp in breakpoints) {
             
             boolean verbose = false
@@ -173,8 +176,12 @@ class BreakpointTableWriter {
             // inthe database
             BreakpointInfo partner = bpo.partner
             
+            String sampleId = bpo.sample
+            if(sampleIdMask)
+                sampleId = sampleId.replaceAll(sampleIdMask, '$1')
+            
             // Check for overlapping genes
-            List breakpointLine = [bp.chr, bp.pos, bp.pos+1, bpo.sample, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
+            List breakpointLine = [bp.chr, bp.pos, bp.pos+1, sampleId, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
             if(refGene) {
                 bp.annotateGenes(refGene, 5000)
                 String geneList = bp.genes.join(",")
