@@ -393,7 +393,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 for(Long xpos in obs.mateXPos) {
                     Region r = XPos.parsePos(xpos)
                     if(!r.isMinorContig() && (r.chr != 'Unk')) {
-                        bpMates.addRegion(new Region(r.chr, r.from-150, r.to+150))
+                        bpMates.addRegion(new Region(prefix+r.chr, r.from-150, r.to+150))
                     }
                 }
             }
@@ -406,7 +406,7 @@ class FindNovelBreakpoints extends DefaultActor {
                 Region r = (Region)robj
                 if(!r.overlaps(existingRegions)) {
                     log.info "Found breakpoint mate region: $r for $bp"
-                    result.addRegion(prefix + r.chr, Math.max(0,r.from-500), r.to+500)
+                    result.addRegion(r.chr, Math.max(0,r.from-500), r.to+500)
                 }
             }
         }
