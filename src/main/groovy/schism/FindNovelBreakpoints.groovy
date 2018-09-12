@@ -217,7 +217,8 @@ class FindNovelBreakpoints extends DefaultActor {
             // then ignore this breakpoint - while such breakpoints could be real,
             // in practice they are nearly always sequencing or mapping artefacts caused by the
             // homopolymer run
-            if(isAllSameBase(reference[1]) || isAllSameBase(reference[0])) {
+            log.info "Ref for $bpId: " + reference.join(":")
+            if(isHomopolymer(reference[1], -5) || isHomopolymer(reference[0], 5)) {
                 log.info "Breakpoint $bpId is adjacent to homopolymer sequence: ignoring due to low complexity / unknown reference"
                 return
             }
@@ -239,18 +240,22 @@ class FindNovelBreakpoints extends DefaultActor {
     }
     
     @CompileStatic
-    private static boolean isAllSameBase(String bases) {
+    private static boolean isHomopolymer(String bases, final int endBasesCount) {
         
         // TODO: Profile / optimize based on charAt(n)
         double maxFracSameBase = bases.iterator().countBy { it }.max { it.value }.value / bases.size()
         
-        return maxFracSameBase > 0.8
+        log.info "Bases: $bases   Homopolymer fraction: $maxFracSameBase"
         
+        // Overall homopolymer
+        if(maxFracSameBase > 0.8)
+            return true
         
-        final char firstBase = bases.charAt(0)
-        final int numBases = bases.size()
-        for(int i=1; i<numBases; ++i) {
-            if(bases.charAt(i) != firstBase)
+        String endBases = endBasesCount > 0 ? bases.substring(0, endBasesCount) : bases.substring(bases.size()+endBasesCount, bases.size())
+        final char firstBase = endBases.charAt(0)
+        final int numEndBases = endBases.size()
+        for(int i=1; i<numEndBases; ++i) {
+            if(endBases.charAt(i) != firstBase)
                 return false
         }
         return true
