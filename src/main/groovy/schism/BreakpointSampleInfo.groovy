@@ -22,6 +22,7 @@ package schism
 
 import gngs.Consensus
 import gngs.XPos
+import graxxia.IntegerStats
 import groovy.transform.CompileStatic;
 import htsjdk.samtools.CigarElement
 import htsjdk.samtools.CigarOperator;
@@ -44,7 +45,7 @@ class BreakpointSampleInfo {
     
     final static int softClipSize = 15
     
-    
+    IntegerStats baseQuals = new IntegerStats(40) 
     
     // For unit testing
     BreakpointSampleInfo() {
@@ -57,14 +58,14 @@ class BreakpointSampleInfo {
         if(reads.size()>1) {
             List<String> softClips = reads.collect {  read ->
                 this.mateXPos.add(XPos.computePos(read.mateReferenceName, read.mateAlignmentStart))
-                extractSoftClip(read, softClipSize) 
+                extractSoftClip(read, softClipSize, baseQuals) 
             }
             Consensus consensus = new Consensus(softClips, softClipSize).build() 
             consensusScore = consensus.score
             bases = consensus.bases
         }
         else {
-            bases = extractSoftClip(reads[0], softClipSize)
+            bases = extractSoftClip(reads[0], softClipSize, baseQuals)
             consensusScore = 0.0d
         }
     }
@@ -75,20 +76,26 @@ class BreakpointSampleInfo {
      * @param numBases
      * @return
      */
-    String extractSoftClip(SAMRecord read, int numBases) {
+    String extractSoftClip(SAMRecord read, int numBases, IntegerStats baseQuals) {
         List<CigarElement> cigars = read.cigar.cigarElements
         CigarElement cigar0 = cigars[0]
+        final byte [] baseQualities = read.baseQualities
         if(cigar0.getOperator() == CigarOperator.S) {
             ++startClips
-            read.readString.substring(Math.max(0,cigar0.length-numBases), cigar0.length)
+            final int startPos = Math.max(0,cigar0.length-numBases)
+            final int endPos = cigar0.length
+            for(int i=startPos; i<endPos; ++i) { baseQuals.addValue(baseQualities[i]) }
+            return read.readString.substring(startPos, endPos)
         }
         else
         if(cigars[-1].getOperator() == CigarOperator.S) {
-            String readString = read.readString
+            final String readString = read.readString
             ++endClips
-            int numBasesToInclude = Math.min(numBases, cigars[-1].length)
-            int start = readString.size()-cigars[-1].length
-            readString.substring(start, start+numBasesToInclude)
+            final int numBasesToInclude = Math.min(numBases, cigars[-1].length)
+            final int startPos = readString.size()-cigars[-1].length
+            final int endPos = startPos+numBasesToInclude
+            for(int i=startPos; i<endPos; ++i) { baseQuals.addValue(baseQualities[i]) }
+            return readString.substring(startPos, endPos)
         }
         else
             assert false

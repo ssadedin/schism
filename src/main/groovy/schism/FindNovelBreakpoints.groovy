@@ -65,6 +65,7 @@ class FindNovelBreakpoints extends DefaultActor {
     int maxSampleCount = 10
     int maxPartnersForOutput = 40
     int maxPartnersToJoin = 7
+    int minMedianBaseQualityScore = 15
     
     // Statistics
     int total = 0
@@ -219,15 +220,20 @@ class FindNovelBreakpoints extends DefaultActor {
             // homopolymer run
             log.info "Ref for $bpId: " + reference.join(":")
             if(isHomopolymer(reference[1], -5) || isHomopolymer(reference[0], 5)) {
-                log.info "Breakpoint $bpId is adjacent to homopolymer sequence: ignoring due to low complexity / unknown reference"
+                log.info "Breakpoint $bpId is adjacent to homopolymer / low complexity sequence: ignoring"
                 return
             }
-
+            
             if(hasAdjacentNBases(reference)) {
                 log.info "Breakpoint $bpId is adjacent to unknown sequence: ignoring"
                 return
             }
-
+            
+            int bqMedian = bpInfo.observations[0].baseQuals.median
+            if(bqMedian < this.minMedianBaseQualityScore) {
+                log.info "Breakpoint $bpId has median base quality $bqMedian for the soft cliped bases: ignoring"
+                return
+            }
             breakpointConnector.indexBreakpoint(bpInfo, reference, verbose)
         }
         ++nonFiltered
