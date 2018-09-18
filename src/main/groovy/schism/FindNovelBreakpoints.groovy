@@ -805,7 +805,9 @@ class FindNovelBreakpoints extends DefaultActor {
                 return new BED(opts.mask).load().reduce()
             }
             else
-                return null
+            return bam.contigs.collect { chr, chrSize ->
+                new Region(chr, 0, chrSize)
+            } as Regions 
         }
             
         // Flatten the regions after so we don't process the same region multiple times
