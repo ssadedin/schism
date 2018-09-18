@@ -355,10 +355,15 @@ class FindNovelBreakpoints extends DefaultActor {
         log.info "Partnering ${breakpoints.size()} breakpoints ..."
         this.breakpointConnector.partnerBreakpoints()
         
-        log.info "Searching for extended regions in $bam.samFile ..."
-        Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
-        log.info "Processing ${extendedRegions.numberOfRanges} extended regions (${extendedRegions.size()}bp)"
-        runOverRegions(extendedRegions, false)
+        if(this.options.extend) {
+            log.info "Searching for extended regions in $bam.samFile ..."
+            Regions extendedRegions = this.findExtendedRegions(new Regions(includedRegions))
+            log.info "Processing ${extendedRegions.numberOfRanges} extended regions (${extendedRegions.size()}bp)"
+            runOverRegions(extendedRegions, false)
+        }
+        else {
+            log.info "Exploration of extended regions is disabled"
+        }
         
         this.send "end"
         this.join()
@@ -506,6 +511,7 @@ class FindNovelBreakpoints extends DefaultActor {
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
             n 'Number of threads to use', args:1, required:false
             localBamPath 'Prefix to path to BAM files, to enable loading in the HTML interface via IGV', args:1, required: false
+            extend 'Enable exploration of extended regions linked to identified breakpoints', args:1, required: false
         }
         return cli
     }
