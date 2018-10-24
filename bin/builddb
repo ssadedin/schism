@@ -12,6 +12,12 @@ CP="$BASE/lib/*:$BASE/src/main/groovy"
 
 JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
 
-$GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/CreateBreakpointDB \
-       $*
+if [ -e $BASE/build/libs/schism.jar ];
+then
+    java -cp "$BASE/lib/*:$BASE/build/libs/*:$BASE/tools/groovy/2.4.6/embeddable/groovy-all-2.4.6.jar" \
+        schism.CreateBreakpointDB $*
+else
+    $GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/CreateBreakpointDB \
+           $*
+fi
 
