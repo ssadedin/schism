@@ -1,0 +1,63 @@
+apply plugin: 'groovy'
+
+project.ext {
+    VERSION="0.0.1"
+    STAGE="build/stage/groovy-ngs-utils-$VERSION"
+    GROOVY_VERSION="2.4.13"
+    // GROOVY_VERSION="2.3.4"
+    //GROOVY_VERSION="2.1.1"
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+  compile
+}
+
+dependencies {
+     compile group: 'org.codehaus.groovy', name: 'groovy', version: "$GROOVY_VERSION"
+     compile group: 'org.codehaus.groovy', name: 'groovy-xml', version: "$GROOVY_VERSION"
+     compile group: 'org.codehaus.groovy', name: 'groovy-ant', version: "$GROOVY_VERSION"
+     compile group: 'org.codehaus.groovy', name: 'groovy-json', version: "$GROOVY_VERSION"
+     compile group: 'org.codehaus.groovy', name: 'groovy-sql', version: "$GROOVY_VERSION"
+     compile group: 'org.apache.ivy', name:'ivy', version:'2.2.0' 
+
+     // https://mvnrepository.com/artifact/org.codehaus.gpars/gpars
+     compile group: 'org.codehaus.gpars', name: 'gpars', version: '1.2.1'
+
+     // compile 'org.xerial:sqlite-jdbc:3.8.6'
+     compile files(fileTree(dir:'lib', includes:['*.jar']))
+
+     testCompile 'junit:junit:4.7'
+}
+
+
+sourceSets {
+    main {
+        groovy {
+            srcDir 'src'
+            exclude '**/JavaInterestingReads.java'
+            exclude '**/GATKInterestingReads.groovy'
+       }
+    }
+}
+
+// Bundle all dependencies into output library,
+// while filtering out some dependencies that cause issues
+jar {
+}
+
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.0'
+}
+
+
+test {
+        testLogging {
+                    // Show that tests are run in the command-line output
+                    events 'started', 'passed'
+        }
+}
