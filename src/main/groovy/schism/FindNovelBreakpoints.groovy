@@ -211,6 +211,13 @@ class FindNovelBreakpoints extends DefaultActor {
     @CompileStatic
     void addBreakpoint(BreakpointInfo bpInfo, boolean verbose) {
         long bpId = bpInfo.id
+        
+        int bqMedian = bpInfo.observations[0].baseQuals.median
+        if(bqMedian < this.minMedianBaseQualityScore) {
+            log.info "Breakpoint $bpId has median base quality $bqMedian for the soft cliped bases: ignoring"
+            return
+        }
+        
         if(reference) {
             String [] reference = bpInfo.queryReference(reference, softClipSize)
 
@@ -229,13 +236,9 @@ class FindNovelBreakpoints extends DefaultActor {
                 return
             }
             
-            int bqMedian = bpInfo.observations[0].baseQuals.median
-            if(bqMedian < this.minMedianBaseQualityScore) {
-                log.info "Breakpoint $bpId has median base quality $bqMedian for the soft cliped bases: ignoring"
-                return
-            }
             breakpointConnector.indexBreakpoint(bpInfo, reference, verbose)
         }
+        
         ++nonFiltered
         breakpoints.add(bpInfo)
     }
@@ -249,7 +252,7 @@ class FindNovelBreakpoints extends DefaultActor {
     private static boolean isHomopolymer(String bases, final int endBasesCount) {
         
         // TODO: Profile / optimize based on charAt(n)
-        double maxFracSameBase = bases.iterator().countBy { it }.max { it.value }.value / bases.size()
+        double maxFracSameBase = bases.toUpperCase().iterator().countBy { it }.max { it.value }.value / bases.size()
         
         log.info "Bases: $bases   Homopolymer fraction: $maxFracSameBase"
         
@@ -855,8 +858,13 @@ class FindNovelBreakpoints extends DefaultActor {
 
         def dbDir = opts.dbdir
         if(!dbDir) {
-            String loadPath = FindNovelBreakpoints.class.classLoader.getResource("SAM.class").path
-            String rootPath = loadPath.replaceAll('/lib/.*$','').tokenize(':')[-1]
+            String loadPath = FindNovelBreakpoints.class.classLoader.getResource("SAM.class")?.path
+            String rootPath 
+            if(loadPath != null)
+                rootPath = loadPath.replaceAll('/lib/.*$','').tokenize(':')[-1]
+            else
+                rootPath = System.getenv('SCHISM_BASE'); 
+                
             dbDir = new File(rootPath,"databases").absolutePath
             log.info "Searching for databases in install database directory: $dbDir"
         }
