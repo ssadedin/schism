@@ -221,10 +221,10 @@ class WriteBreakpointDBActor extends RegulatingActor {
             ref = bp.queryReference(reference, softClipSize)[0]
         }
         
-        db.execute """
+        db.execute("""
           insert into breakpoint (id, chr, pos, sample_count, obs, ref)
           values ($bp.id, $bp.chr, $bp.pos, $bp.sampleCount, $bp.obs, $ref)
-        """
+        """)
             
         String insertBreakpointObservation = """
           insert into breakpoint_observation (id, bp_id, sample, obs, start_clips, end_clips, bases, consensus)
