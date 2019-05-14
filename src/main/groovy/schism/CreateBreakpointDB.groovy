@@ -93,6 +93,9 @@ class CreateBreakpointDB {
                 throw new RuntimeException("Unable to delete existing database $dbFile.absolutePath")
         }
         
+        log.info "BAMs are: " + bams
+        log.info "Regions are: " + opts.regions
+        
         List<Region> regions = resolveRegions(opts, bams)
        
         int retries = opts.r ? opts.r.toInteger() : 0
@@ -188,7 +191,8 @@ class CreateBreakpointDB {
             }.flatten().grep { 
                 it && it.size() > minRegionSize
             }
-            log.info "${maskedRegions*.size().sum()}bp/${region.size()}bp remaining after excluding masked regions"
+            int maskedSize = maskedRegions*.size().sum()?:0
+            log.info "${maskedSize}bp/${region.size()}bp remaining after excluding masked regions"
         }
         
         
