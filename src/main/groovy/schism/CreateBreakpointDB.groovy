@@ -201,7 +201,7 @@ class CreateBreakpointDB {
         
         
         if(finalRegions.isEmpty())
-            finalRegions = [region]
+            finalRegions = []
         
         log.info "Resolved ${finalRegions.size()} regions beginning with ${finalRegions[0]} and ending with ${finalRegions[-1]}"
         
