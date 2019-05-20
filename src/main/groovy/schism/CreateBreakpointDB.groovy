@@ -49,6 +49,9 @@ import groovyx.gpars.GParsPool;
 @Log
 class CreateBreakpointDB {
     
+    /**
+     * The size of the chunks that the genome will be split into to process in parallel
+     */
     static int chunkBp = 200000
     
     static long startTimeMs = System.currentTimeMillis()
@@ -64,15 +67,18 @@ class CreateBreakpointDB {
             t 'Number of threads to use (<= number of samples)', args:1, required:false
             r 'Number of retries if error occurs scanning region', args:1, required:false
             s 'Write run statistics to file', args:1, required: false
+            po 'Only process contigs belonging to the primary assembly', longOpt: 'primary'
             sampleids 'List of comma separated sample ids to associate to BAM files (default: used sample id from BAM file)', args:1, required:false
             adapter 'Set adapter sequence to <arg> for filtering out adapter contamination', args:1, required:false
             fresh 'Overwrite / recreate existing database instead of adding to it', required:false
-            region 'Region to process (if not provided, all contigs in first BAM file)', args: Cli.UNLIMITED
+            region 'Region to process (if not provided, all contigs in first BAM file)', longOpt: 'region', args: Cli.UNLIMITED, valueSeparator:','
             mask 'Mask containing regions to exclude (skip over these regions)', args:1, required: false
             ref 'Reference sequence (optional) to annotate reference sequence at each breakpoint', args:1, required: false
             v 'Verbose logging of filtering decisions (appears in file <db>.log)', required:false
             'L' 'Mask of regions to include (scan these interesected with that specified by -region)', args:1, required: false
         }
+        
+        log.info "Parsing arguments: " + args
         
         def opts = cli.parse(args)
         if(!opts) {
@@ -169,7 +175,7 @@ class CreateBreakpointDB {
         // First decide the chunks
         List<Region> subRegions = (region.from..region.to).step(chunkBp).collect { from ->
             int end = Math.min(region.to, (from+chunkBp))
-            log.info "Sub region $from - $end"
+//            log.info "Sub region $from - $end"
             if(end - from > minRegionSize)
                 new Region(region.chr, from..<end)
             else
@@ -310,6 +316,11 @@ class CreateBreakpointDB {
         
         Regions result = new Regions(subRegions).reduce()
         
+        if(opts.po)  {
+            log.info "Removing non-primary contigs ...."
+            result = result.grep { !it.isMinorContig() } as Regions
+        }
+        
         if(result.size() < 1) {
             log.info "Region to scan is empty: database already processed? Use -fresh to force recreation"
             System.exit(0)
@@ -322,6 +333,7 @@ class CreateBreakpointDB {
     private static Region resolveRegion(String regionValue, List bams, String databaseFile) {
         // If region is just a chromosome then look for the chromosome length in the first bam file
         if(!regionValue.contains(":")) {
+            log.info "Inferring regions from bams: " + bams
             regionValue = regionValue + ":0-" + bams[0].contigs[regionValue]
         }
         
