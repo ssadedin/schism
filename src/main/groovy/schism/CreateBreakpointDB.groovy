@@ -206,14 +206,18 @@ class CreateBreakpointDB {
             }.flatten().grep { 
                 it && it.size() > minRegionSize
             }
-            log.info "${finalRegions*.size().sum()}bp/${region.size()} remaining after intersecting with included regions"
+            
+            int finalSize = finalRegions*.size().sum()?:0
+            
+            log.info "${finalSize}bp/${region.size()} remaining after intersecting with included regions"
         }
         
-        
-        if(finalRegions.isEmpty())
+        if(finalRegions.isEmpty()) {
             finalRegions = []
-        
-        log.info "Resolved ${finalRegions.size()} regions beginning with ${finalRegions[0]} and ending with ${finalRegions[-1]}"
+            log.warning "No regions from $region remained after interescting BAM regions with analysis regions and removing masked out regions"
+        }
+        else
+            log.info "Resolved ${finalRegions.size()} regions beginning with ${finalRegions[0]} and ending with ${finalRegions[-1]}"
         
         return finalRegions
     }
