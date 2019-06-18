@@ -34,6 +34,7 @@ import gngs.SimpleLogFormatter
 import gngs.Utils
 import groovy.sql.Sql
 import groovy.time.TimeCategory;
+import groovy.transform.CompileStatic
 import groovy.util.logging.Log
 import groovyx.gpars.GParsPool;
 
@@ -59,7 +60,7 @@ class CreateBreakpointDB {
     static void main(String [] args) {
         
         Banner.banner()
-        
+       
         Cli cli = new Cli(usage:"builddb <options> <bam file 1> [<bam file 2> ...]")
         cli.with {
             db 'Database file to create', args: 1, required: true
@@ -168,7 +169,8 @@ class CreateBreakpointDB {
      * @param region    region to use as a base for producing sub-regions
      * @return
      */
-    private static List resolveSubRegions(def opts, Region region) {
+    @CompileStatic
+    private static List resolveSubRegions(def opts, final Region region, final BED included, final BED mask) {
         
         log.info "Resolving sub regions of $region"
         
@@ -184,30 +186,28 @@ class CreateBreakpointDB {
         
         // Mask out excluded regions
         List<Region> maskedRegions = subRegions
-        if(opts.mask) {
+        if(mask) {
             // Load the BED file
-            BED bed = new BED(opts.mask).load()
-            maskedRegions = subRegions.collect { Region r ->
-                bed.subtractFrom(r)
-            }.flatten().grep { 
-                it && it.size() > minRegionSize
+            maskedRegions = (List<Region>)subRegions.collect { Region r ->
+                mask.subtractFrom(r)
+            }.flatten().grep { Region r ->
+                r && r.size() > minRegionSize
             }
-            int maskedSize = maskedRegions*.size().sum()?:0
+            int maskedSize = (int)(maskedRegions*.size().sum()?:0)
             log.info "${maskedSize}bp/${region.size()}bp remaining after excluding masked regions"
         }
         
         
         // Intersect with inclusion mask
         List<Region> finalRegions = maskedRegions
-        if(opts.L) {
-            BED bed = new BED(opts.L).load()
-            finalRegions = finalRegions.collect { Region r ->
-                bed.intersect(r).collect { new Region(region.chr, it.from..it.to) }
-            }.flatten().grep { 
-                it && it.size() > minRegionSize
+        if(included) {
+            finalRegions = (List<Region>)finalRegions.collect { Region r ->
+                included.intersect(r).collect { new Region(region.chr, it.from..it.to) }
+            }.flatten().grep { Region r ->
+                r && (r.size() > minRegionSize)
             }
             
-            int finalSize = finalRegions*.size().sum()?:0
+            int finalSize = (int)(finalRegions*.size().sum()?:0)
             
             log.info "${finalSize}bp/${region.size()} remaining after intersecting with included regions"
         }
@@ -309,12 +309,15 @@ class CreateBreakpointDB {
             log.info "Inferred contigs to process from bam file: " + regionValues
         }
         
+        BED mask = opts.mask ? new BED(opts.mask).load() : null
+        BED included = opts.L ? new BED(opts.L).load() : null
+ 
         List<Region> subRegions = regionValues.collect { String regionValue ->
             Region region = resolveRegion(regionValue, bams, opts.db)
             
             log.info "Adding scanned region $region"
             
-            resolveSubRegions(opts, region)
+            resolveSubRegions(opts, region, included, mask)
             
         }.flatten()
         
@@ -336,11 +339,14 @@ class CreateBreakpointDB {
     private static Region resolveRegion(String regionValue, List bams, String databaseFile) {
         // If region is just a chromosome then look for the chromosome length in the first bam file
         if(!regionValue.contains(":")) {
-            log.info "Inferring regions from bams: " + bams
+            log.info "Inferring regions from bams: " + bams + " for region $regionValue"
             regionValue = regionValue + ":0-" + bams[0].contigs[regionValue]
         }
         
+        
         Region region = new Region(regionValue)
+        
+        log.info "Actual scanned range is " + region
         
         // If database exists, determine the maximum breakpoint and resume from there
         if(new File(databaseFile).exists()) {
