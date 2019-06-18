@@ -180,7 +180,7 @@ class CreateBreakpointDB {
         log.info "Resolving sub regions of $region"
         
         // First decide the chunks
-        List<Region> subRegions = (region.from..region.to).step(chunkBp).collect { from ->
+        List<Region> subRegions = (List<Region>)(region.from..region.to).step(chunkBp).collect { from ->
             int end = Math.min(region.to, (from+chunkBp))
 //            log.info "Sub region $from - $end"
             if(end - from > minRegionSize)
@@ -316,9 +316,11 @@ class CreateBreakpointDB {
         
         BED mask = opts.mask ? new BED(opts.mask).load() : null
         BED included = opts.L ? new BED(opts.L).load() : null
+        
+        Map<String, Integer> bamContigs =  bams[0].contigs
  
         List<Region> subRegions = regionValues.collect { String regionValue ->
-            Region region = resolveRegion(regionValue, bams, opts.db)
+            Region region = resolveRegion(regionValue, bamContigs, opts.db)
             
             log.info "Adding scanned region $region"
             
@@ -344,11 +346,11 @@ class CreateBreakpointDB {
     }
     
 
-    private static Region resolveRegion(String regionValue, List bams, String databaseFile) {
+    private static Region resolveRegion(String regionValue, Map<String,Integer> bamContigs, String databaseFile) {
         // If region is just a chromosome then look for the chromosome length in the first bam file
         if(!regionValue.contains(":")) {
-            log.info "Inferring regions from bams: " + bams + " for region $regionValue"
-            regionValue = regionValue + ":0-" + bams[0].contigs[regionValue]
+            log.info "Inferring regions from bams contigs for region $regionValue"
+            regionValue = regionValue + ":0-" + bamContigs[regionValue]
         }
         
         
