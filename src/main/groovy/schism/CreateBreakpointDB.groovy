@@ -279,11 +279,11 @@ class CreateBreakpointDB {
         
         def stats = [
             runtime: TimeCategory.minus(new Date(), new Date(startTimeMs)),
-            breakpoints: bpes*.countInteresting.sum(),
-            noisy:  bpes*.countNoisy.sum(),
-            contam: bpes*.filter*.countContam.sum(),
-            lowqual:bpes*.filter*.countLowQual.sum(),
-            adapter:bpes*.filter*.countAdapter.sum()
+            breakpoints: bpes*.countInteresting.sum()?:0,
+            noisy:  bpes*.countNoisy.sum()?:0,
+            contam: bpes*.filter*.countContam.sum()?:0,
+            lowqual:bpes*.filter*.countLowQual.sum()?:0,
+            adapter:bpes*.filter*.countAdapter.sum()?:0
         ]
         
         String statsValue = stats.collect { name, value ->
