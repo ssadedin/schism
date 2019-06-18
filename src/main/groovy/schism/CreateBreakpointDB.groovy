@@ -335,7 +335,6 @@ class CreateBreakpointDB {
         
         if(result.size() < 1) {
             log.info "Region to scan is empty: database already processed? Use -fresh to force recreation"
-            System.exit(0)
         }
         
         return result as List
