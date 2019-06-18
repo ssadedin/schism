@@ -10,11 +10,11 @@ CP="$BASE/lib/*:$BASE/src/main/groovy"
 # : ${SCHISM_REF:="/seq/references/Homo_sapiens_assembly19/v1/Homo_sapiens_assembly19.fasta"}
 : ${SCHISM_REF:=""}
 
-JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
+export JAVA_OPTS="-Xmx$JAVA_MEM -noverify -Dsamjdk.reference_fasta=$SCHISM_REF" \
 
 if [ -e $BASE/build/libs/schism.jar ];
 then
-    java -cp "$BASE/lib/*:$BASE/build/libs/*:$BASE/tools/groovy/2.5.13/lib/*" \
+    java $JAVA_OPTS -cp "$BASE/lib/*:$BASE/build/libs/*:$BASE/tools/groovy/2.5.13/lib/*" \
         schism.CreateBreakpointDB $*
 else
     $GROOVY_HOME/bin/groovy -cp $CP $BASE/src/main/groovy/schism/CreateBreakpointDB \
