@@ -30,7 +30,7 @@ export default {
     },
        
     mounted: function() {
-        console.log('Mounted overview')
+        window.console.log('Mounted overview')
         model.fetchCohorts()
     },
     
@@ -44,7 +44,8 @@ export default {
         },
 
         importCohort() {
-            console.log('Importing cohort')
+            window.console.log('Importing cohort')
+            this.$router.push('/import')
         }
     },
     

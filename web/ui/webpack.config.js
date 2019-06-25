@@ -81,6 +81,7 @@ module.exports = {
     overlay: true,
     proxy: {
       '/cohort': 'http://localhost:8081',
+      '/import': 'http://localhost:8081',
     } 
   },
   performance: {

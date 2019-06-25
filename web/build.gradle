@@ -56,7 +56,11 @@ dependencies {
     compile "org.codehaus.groovy:groovy-sql:2.5.4"
     compile "org.codehaus.groovy:groovy-json:2.5.4"
 
-    runtime "com.h2database:h2"
+
+    runtime group: 'org.xerial', name: 'sqlite-jdbc', version: '3.27.2.1'
+
+    runtime group: 'com.h2database', name: 'h2', version: '1.4.199'
+
     testCompile "junit:junit:4.12"
     testCompile "org.hamcrest:hamcrest-all:1.3"
 

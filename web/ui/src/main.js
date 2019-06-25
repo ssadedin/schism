@@ -15,6 +15,7 @@ import Cohort from './Cohort.vue'
 import SampleDetail from './SampleDetail.vue'
 import App from './App.vue'
 import BreakpointsView from './Breakpoints'
+import ImportDatabase from './ImportDatabase'
 
 class Model {
     
@@ -91,6 +92,7 @@ var routes = [
     // { path: '/cohort/create', component: Vue.component('add-cohort'), props: true},
     { path: '/cohort/:cohortId/breakpoints', component: BreakpointsView, props: true},
     { path: '/cohort/:id', component: Cohort, props: true},
+    { path: '/import', component: ImportDatabase, props: true},
     // { path: '/cohort/:id/add-breakpoints', component: Vue.component('add-breakpoints'), props: true},
     // { path: '/cohort/:cohortId/:id', component: Vue.component('SampleDetail'), props: true},
 ] 
