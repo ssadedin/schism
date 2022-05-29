@@ -21,6 +21,7 @@ package schism
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+import groovy.sql.GroovyRowResult
 import groovy.transform.AutoClone
 import groovy.transform.CompileStatic;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
@@ -56,6 +57,20 @@ class BreakpointInfo {
     List<String> genes
     
     List<Integer> exonDistances
+	
+
+    static BreakpointInfo fromRow(GroovyRowResult row) {
+		
+		println "Row: \n\n$row"
+		new BreakpointInfo(
+			id : (Long)row.id,
+			obs : (Integer)row.obs,
+			chr : (String)row.chr,
+			pos : (Integer)row.pos,
+			sampleCount : (Integer)row.sample_count
+		)
+    }
+	
     
     void annotateGenes(RefGenes refGene, int window) {
         Region checkRegion = new Region(chr, (pos - window)..(pos + window))

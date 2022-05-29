@@ -285,7 +285,7 @@ class BuildBreakpointDB {
     }
 }
 
-@Log4j
+@Log
 class AutoDao {
     
     static void init(ConnectionSource conn, Class modelClass) {

@@ -30,6 +30,7 @@ import com.j256.ormlite.table.DatabaseTable
 import com.j256.ormlite.table.TableUtils
 
 import gngs.XPos
+import groovy.sql.GroovyRowResult
 import groovy.transform.CompileStatic;
 import groovy.transform.ToString;
 import groovy.util.logging.Log4j;
@@ -40,6 +41,14 @@ class Breakpoint {
     public static Dao DAO = null
     
     Breakpoint() {
+    }
+
+    Breakpoint(GroovyRowResult row) {
+		this.id = row.id
+		this.obs = row.obs
+		this.chr = row.chr
+		this.pos = row.pos
+		this.sampleCount = row.sample_count
     }
     
     @DatabaseField(id=true, useGetSet=true)

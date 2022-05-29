@@ -1,4 +1,3 @@
-package schism
 // vim: shiftwidth=4:ts=4:expandtab:cindent
 /////////////////////////////////////////////////////////////////////////////////
 //
@@ -19,6 +18,8 @@ package schism
 // along with Schism.  If not, see <http://www.gnu.org/licenses/>.
 //
 /////////////////////////////////////////////////////////////////////////////////
+
+package schism
 
 import gngs.GRange
 import gngs.Region
@@ -137,12 +138,7 @@ class BreakpointDatabaseSet {
     
     @CompileStatic
     int getBreakpointFrequency(String chr, int pos, String excludeSample) {
-        List<Sql> dbs = (List<Sql>)databases.getOverlaps(chr, pos, pos+1).collect { r ->
-            GRange gr = (GRange)r
-            Expando e = (Expando)gr.extra
-            e.getProperty('db')
-        }.unique {System.identityHashCode(it)}
-        
+        List<Sql> dbs = getOverlappingDbs(chr, pos, pos+1)       
         if(!dbs) {
             if(!warnedAboutNoOverlap) {
                 log.info "WARNING: No provided databases overlap breakpoint $chr:$pos"
@@ -150,12 +146,54 @@ class BreakpointDatabaseSet {
             }
             return 0
         }
-        
             
         return (int)dbs.collect { db ->
             getDbBreakpointFrequency(db, chr,pos, excludeSample)
         }.sum()?:0
     }
+	
+    @CompileStatic
+    BreakpointInfo getBreakpointData(String chr, int pos) {
+        List<Sql> dbs = getOverlappingDbs(chr, pos, pos+1)       
+
+		List<BreakpointInfo> bps = dbs.collect { db ->
+			this.getBreakpointData(db, chr, pos)
+		}.grep { it }
+		
+		if(bps.isEmpty())
+			return new BreakpointInfo(
+				id: (Long)null,
+				chr: chr,
+				pos: pos,
+				obs: 0,
+				sampleCount: 0
+			)	
+		
+		if(bps.size()==1)
+			return bps[0]
+			
+        return new BreakpointInfo(
+			id: bps[0].id,
+			chr: bps[0].chr,
+			pos: bps[0].pos,
+			obs: (int)bps*.obs.sum(),
+			sampleCount: (int)bps*.sampleCount.sum()
+		)
+	}
+	
+    @CompileStatic
+    BreakpointInfo getBreakpointData(Sql db, String chr, int pos) {
+        long breakpointId = XPos.computePos(chr, pos)
+        synchronized(db) {
+            GroovyRowResult dbBreakpoint = db.firstRow("select * from breakpoint where id = $breakpointId")        
+			
+			if(dbBreakpoint)
+				return BreakpointInfo.fromRow(dbBreakpoint)
+			else
+				return null
+        }
+    }
+ 	
     
     @CompileStatic
     int getDbBreakpointFrequency(Sql db, String chr, int pos, String excludeSample) {
@@ -185,6 +223,17 @@ class BreakpointDatabaseSet {
             }
         }
     }
+	
+	@CompileStatic
+	List<Sql> getOverlappingDbs(String chr, int start, int end) {
+        return (List<Sql>)databases.getOverlaps(chr, start, end).collect { r ->
+            GRange gr = (GRange)r
+            Expando e = (Expando)gr.extra
+            e.getProperty('db')
+        }.unique {System.identityHashCode(it)}	
+	}
+		
+	
     
 	/**
 	 * Close database connections
