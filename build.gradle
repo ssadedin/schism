@@ -1,11 +1,10 @@
 apply plugin: 'groovy'
+apply plugin: 'java'
 
 project.ext {
     VERSION="0.0.1"
     STAGE="build/stage/groovy-ngs-utils-$VERSION"
-    GROOVY_VERSION="2.4.13"
-    // GROOVY_VERSION="2.3.4"
-    //GROOVY_VERSION="2.1.1"
+    GROOVY_VERSION="2.5.13"
 }
 
 repositories {
@@ -17,20 +16,26 @@ configurations {
 }
 
 dependencies {
-     compile group: 'org.codehaus.groovy', name: 'groovy', version: "$GROOVY_VERSION"
-     compile group: 'org.codehaus.groovy', name: 'groovy-xml', version: "$GROOVY_VERSION"
-     compile group: 'org.codehaus.groovy', name: 'groovy-ant', version: "$GROOVY_VERSION"
-     compile group: 'org.codehaus.groovy', name: 'groovy-json', version: "$GROOVY_VERSION"
-     compile group: 'org.codehaus.groovy', name: 'groovy-sql', version: "$GROOVY_VERSION"
-     compile group: 'org.apache.ivy', name:'ivy', version:'2.2.0' 
+
+     implementation group: 'org.codehaus.groovy', name: 'groovy', version: "$GROOVY_VERSION"
+     implementation group: 'org.codehaus.groovy', name: 'groovy-xml', version: "$GROOVY_VERSION"
+     implementation group: 'org.codehaus.groovy', name: 'groovy-ant', version: "$GROOVY_VERSION"
+     implementation group: 'org.codehaus.groovy', name: 'groovy-json', version: "$GROOVY_VERSION"
+     implementation group: 'org.codehaus.groovy', name: 'groovy-sql', version: "$GROOVY_VERSION"
+     implementation group: 'org.codehaus.groovy', name: 'groovy-cli-commons', version: "$GROOVY_VERSION"
+     implementation group: 'org.apache.ivy', name:'ivy', version:'2.2.0' 
+	 
+	 implementation group: 'com.j256.ormlite', name: 'ormlite-core', version: '6.1'
+	 implementation group: 'com.j256.ormlite', name: 'ormlite-jdbc', version: '6.1'
+	 
 
      // https://mvnrepository.com/artifact/org.codehaus.gpars/gpars
-     compile group: 'org.codehaus.gpars', name: 'gpars', version: '1.2.1'
+     implementation group: 'org.codehaus.gpars', name: 'gpars', version: '1.2.1'
 
-     // compile 'org.xerial:sqlite-jdbc:3.8.6'
-     compile files(fileTree(dir:'lib', includes:['*.jar']))
+     // implementation 'org.xerial:sqlite-jdbc:3.8.6'
+     implementation files(fileTree(dir:'lib', includes:['*.jar']))
 
-     testCompile 'junit:junit:4.7'
+     testImplementation 'junit:junit:4.7'
 }
 
 
@@ -50,8 +55,8 @@ jar {
 }
 
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.0'
+wrapper {
+    gradleVersion = '7.4.2'
 }
 
 

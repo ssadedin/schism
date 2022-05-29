@@ -20,11 +20,6 @@ package schism
 //
 /////////////////////////////////////////////////////////////////////////////////
 
-import org.apache.log4j.BasicConfigurator
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-
 import com.j256.ormlite.dao.Dao
 import com.j256.ormlite.dao.DaoManager;
 import com.j256.ormlite.jdbc.JdbcConnectionSource
@@ -58,7 +53,7 @@ import java.sql.Statement;;
  * 
  * @author simon
  */
-@Log4j
+@Log
 class BuildBreakpointDB {
     
     public static final int BREAKPOINT_CACHE_SIZE = 300000
@@ -226,13 +221,11 @@ class BuildBreakpointDB {
     
     static void main(String [] args) {
         
-        println "=" * 80
-        println "Breakpoint DB Builder"
-        println "=" * 80
-        
-        BasicConfigurator.resetConfiguration()
-        BasicConfigurator.configure()
-        Logger.getRootLogger().setLevel(Level.INFO);
+		Utils.configureSimpleLogging()
+
+        log.info "=" * 80
+        log.info "Breakpoint DB Builder"
+        log.info "=" * 80
         
         Cli cli = new Cli(usage:"builddb <options> <bam file 1> [<bam file 2> ...]")
         cli.with {

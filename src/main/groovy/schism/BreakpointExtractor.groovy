@@ -211,7 +211,7 @@ class BreakpointExtractor {
                     
             List<SAMRecord> readsToSend = 
                 priorReads ?
-                    localReads + priorReads
+                    (List<SAMRecord>)(localReads + priorReads)
                 :
                     localReads
                 
