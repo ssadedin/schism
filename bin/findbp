@@ -4,7 +4,7 @@ BASE=$(cd `dirname $0`/..; pwd)
 
 export SCHISM_BASE="$BASE"
 
-GROOVY_HOME="$BASE/tools/groovy/2.4.6"
+GROOVY_HOME="$BASE/tools/groovy/2.5.13"
 CP="$BASE/lib/*:$BASE/src/main/groovy:$BASE/src/main/resources"
 
 : ${JAVA_MEM:="8g"}

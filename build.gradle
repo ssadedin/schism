@@ -24,6 +24,7 @@ dependencies {
      implementation group: 'org.codehaus.groovy', name: 'groovy-sql', version: "$GROOVY_VERSION"
      implementation group: 'org.codehaus.groovy', name: 'groovy-cli-commons', version: "$GROOVY_VERSION"
      implementation group: 'org.apache.ivy', name:'ivy', version:'2.2.0' 
+	 implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.36.0.3'
 	 
 	 implementation group: 'com.j256.ormlite', name: 'ormlite-core', version: '6.1'
 	 implementation group: 'com.j256.ormlite', name: 'ormlite-jdbc', version: '6.1'
@@ -32,7 +33,6 @@ dependencies {
      // https://mvnrepository.com/artifact/org.codehaus.gpars/gpars
      implementation group: 'org.codehaus.gpars', name: 'gpars', version: '1.2.1'
 
-     // implementation 'org.xerial:sqlite-jdbc:3.8.6'
      implementation files(fileTree(dir:'lib', includes:['*.jar']))
 
      testImplementation 'junit:junit:4.7'
@@ -42,7 +42,7 @@ dependencies {
 sourceSets {
     main {
         groovy {
-            srcDir 'src'
+            srcDir 'src/main/groovy'
             exclude '**/JavaInterestingReads.java'
             exclude '**/GATKInterestingReads.groovy'
        }
