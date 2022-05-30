@@ -60,8 +60,6 @@ class BreakpointInfo {
 	
 
     static BreakpointInfo fromRow(GroovyRowResult row) {
-		
-		println "Row: \n\n$row"
 		new BreakpointInfo(
 			id : (Long)row.id,
 			obs : (Integer)row.obs,
