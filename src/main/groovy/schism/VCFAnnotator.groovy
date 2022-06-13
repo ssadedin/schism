@@ -56,9 +56,13 @@ class VCFAnnotator extends ToolBase {
         VCF.filter(opts.i) { Variant v ->
             log.info "Processing variant $v"
             v.update('Schism breakpoint frequency annotation') {
-                List bps = (-range..range).collect { offset ->
-                        breakpoints.getBreakpointData(v.chr, v.pos+offset)
+                List bps = (-range..range).collect { offset -> breakpoints.getBreakpointData(v.chr, v.pos+offset) }
+                if(v.info.SVLEN) {
+                    int endPoint = (v.pos + v.info.SVLEN.toInteger())
+                    List endBps = (-range..range).collect { offset -> breakpoints.getBreakpointData(v.chr, endPoint+offset) }
+                    bps.addAll(endBps)
                 }
+                
                 v.info.SCHISM_OBS = bps*.obs.join(',')
                 v.info.SCHISM_OBS_MAX = bps*.obs.max()
                 v.info.SCHISM_SC = bps*.sampleCount.join(',')
