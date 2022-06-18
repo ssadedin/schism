@@ -74,7 +74,7 @@ class BreakpointInfo {
         Region checkRegion = new Region(chr, (pos - window)..(pos + window))
         this.genes = refGene.getGenes(checkRegion)
         
-        this.exonDistances = genes.collect { String gene ->
+        this.exonDistances = (List<Integer>)genes.collect { String gene ->
 //            refGene.getExons(gene).overlaps(this.chr, this.pos-1, this.pos+1)
             Regions exons = refGene.getExons(gene)
             
@@ -86,8 +86,11 @@ class BreakpointInfo {
                 return 0
                 
             IntRange nearestExon = exons.nearest(this.chr, this.pos)
-            return Math.min(Math.abs(nearestExon.from - pos), Math.abs(nearestExon.to - pos))
-        }
+            if(nearestExon)
+                return Math.min(Math.abs(nearestExon.from - pos), Math.abs(nearestExon.to - pos))
+            else
+                return null
+        }.grep { it }
     }
     
     void add(BreakpointMessage msg) {
