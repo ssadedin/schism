@@ -106,7 +106,7 @@ class BreakpointReadFilter {
         return false
     }
     
-    private final static byte qualScoreCutoff = 12i
+    private static byte qualScoreCutoff = 12i
     
     @CompileStatic
     boolean hasPoorBaseQualities(SAMRecord read) {

@@ -66,6 +66,7 @@ class CreateBreakpointDB {
             s 'Write run statistics to file', args:1, required: false
             sampleids 'List of comma separated sample ids to associate to BAM files (default: used sample id from BAM file)', args:1, required:false
             adapter 'Set adapter sequence to <arg> for filtering out adapter contamination', args:1, required:false
+            baseQualityThreshold "set the base quality threshold below which soft clips will be counted as low quality (${BreakpointReadFilter.qualScoreCutoff})", args:1, type: Integer
             fresh 'Overwrite / recreate existing database instead of adding to it', required:false
             region 'Region to process (if not provided, all contigs in first BAM file)', args: Cli.UNLIMITED
             mask 'Mask containing regions to exclude (skip over these regions)', args:1, required: false
@@ -114,6 +115,10 @@ class CreateBreakpointDB {
             }
             else 
                 dbWriter.reference = new FASTA(opts.ref)
+        }
+        
+        if(opts.baseQualityThreshold != false) {
+            BreakpointReadFilter.qualScoreCutoff = opts.baseQualityThreshold
         }
         
         dbWriter.start()
