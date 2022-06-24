@@ -309,7 +309,11 @@ class CreateBreakpointDB {
             
         }.flatten()
         
+        log.info "Unflattened regions are: \n" + subRegions.join('\n')
+        
         Regions result = new Regions(subRegions).reduce()
+        
+        log.info "After flattening there are ${result.numberOfRanges} ranges to scan"
         
         if(result.size() < 1) {
             log.info "Region to scan is empty: database already processed? Use -fresh to force recreation"
