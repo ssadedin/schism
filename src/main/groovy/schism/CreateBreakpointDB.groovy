@@ -122,15 +122,15 @@ class CreateBreakpointDB {
         }
         
         dbWriter.start()
-        dbWriter.send "init"
+        dbWriter.sendTo "init"
         
-        dbWriter.send([bams: bams])
+        dbWriter.sendTo([bams: bams])
         
         String adapterSeq = opts.adapter ?: null
         
         List breakpointExtractors = scanBAMRegions(regions, concurrency, bams, dbWriter, filterLog, opts.v, retries, adapterSeq, samples)
         
-        dbWriter.send("end")
+        dbWriter.sendTo("end")
         log.info("Waiting for db writer to finalize")
         
         dbWriter.join()
@@ -261,7 +261,7 @@ class CreateBreakpointDB {
             ++subRegionCount
             log.info "Number of open files = " + Utils.getNumberOfOpenFiles()
             log.info "Finished region $subRegion ($subRegionCount / ${subRegions.size()}): flushing database"
-            dbWriter.send("flush")
+            dbWriter.sendTo("flush")
         }
         return breakpointExtractors
     }

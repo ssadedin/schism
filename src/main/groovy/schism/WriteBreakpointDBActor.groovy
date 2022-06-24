@@ -39,6 +39,7 @@ import java.util.logging.Logger;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics
 
 import gngs.FASTA
+import gngs.RegulatingActor
 import gngs.SAM
 import gngs.XPos
 
@@ -50,7 +51,7 @@ import gngs.XPos
  * to a database.
  */
 @Log
-class WriteBreakpointDBActor extends DefaultActor {
+class WriteBreakpointDBActor extends RegulatingActor {
     
     File outputFile
     
@@ -85,37 +86,68 @@ class WriteBreakpointDBActor extends DefaultActor {
         this.extractorPositions = samples.collectEntries { [it, 0] }
     }
     
-    void act() {
-        loop {
-            react { msg ->
-                if(msg instanceof BreakpointMessage) {
-                    BreakpointInfo bpInfo = processReads(msg)
-                    flushCoveredPositions(msg.sample, bpInfo)
-                }
-                else 
-                if(msg == "init") {
-                    log.info "Initializing database"
-                    this.db = init(outputFile.absolutePath)
-                    
-                    assert this.db != null
-                }
-                else 
-                if(msg == "end") {
-                    log.info "Closing database file $outputFile after writing $countWritten breakpoints"
-                    finalizeDatabase()
-                    terminate()
-                }
-                else
-                if(msg == "flush") {
-                    flush()
-                }
-                else
-                if(msg instanceof Map) {
-                    saveSamples(msg.bams)
-                }
-            }
+    @CompileStatic
+    @Override
+    public void process(Object msg) {
+        if(msg instanceof BreakpointMessage) {
+            BreakpointInfo bpInfo = processReads(msg)
+            flushCoveredPositions(msg.sample, bpInfo)
+        }
+        else
+        if(msg == "init") {
+            log.info "Initializing database"
+            this.db = init(outputFile.absolutePath)
+
+            assert this.db != null
+        }
+        else
+        if(msg == "end") {
+            log.info "Closing database file $outputFile after writing $countWritten breakpoints"
+            finalizeDatabase()
+            terminate()
+        }
+        else
+        if(msg == "flush") {
+            flush()
+        }
+        else
+        if(msg instanceof Map) {
+            saveSamples((List<SAM>)msg.bams)
         }
     }
+    
+//    @CompileStatic
+//    void act() {
+//        loop {
+//            react { msg ->
+//                if(msg instanceof BreakpointMessage) {
+//                    BreakpointInfo bpInfo = processReads(msg)
+//                    flushCoveredPositions(msg.sample, bpInfo)
+//                }
+//                else 
+//                if(msg == "init") {
+//                    log.info "Initializing database"
+//                    this.db = init(outputFile.absolutePath)
+//                    
+//                    assert this.db != null
+//                }
+//                else 
+//                if(msg == "end") {
+//                    log.info "Closing database file $outputFile after writing $countWritten breakpoints"
+//                    finalizeDatabase()
+//                    terminate()
+//                }
+//                else
+//                if(msg == "flush") {
+//                    flush()
+//                }
+//                else
+//                if(msg instanceof Map) {
+//                    saveSamples((List<SAM>)msg.bams)
+//                }
+//            }
+//        }
+//    }
     
     /**
      * If there is already a breakpoint at this position, update it to include
@@ -123,6 +155,7 @@ class WriteBreakpointDBActor extends DefaultActor {
      * 
      * @param msg
      */
+    @CompileStatic
     BreakpointInfo processReads(BreakpointMessage msg) {
         Long bpId = XPos.computePos(msg.chr, msg.pos)
         if(bpId in processed)
@@ -133,6 +166,7 @@ class WriteBreakpointDBActor extends DefaultActor {
         return bpInfo
     }
     
+    @CompileStatic
     void flushCoveredPositions(String sampleId, BreakpointInfo bpInfo) {
         
         extractorPositions[sampleId] = bpInfo.id
@@ -205,6 +239,7 @@ class WriteBreakpointDBActor extends DefaultActor {
         ++countWritten
     }
     
+    @CompileStatic
     void saveSamples(List<SAM> bams) {
         log.info "Saving sample information from ${bams.size()} bams ..."
         for(SAM bam in bams) {
@@ -217,6 +252,7 @@ class WriteBreakpointDBActor extends DefaultActor {
     /**
      * Write all remaining breakpoints to db and clear breakpoint tracking info
      */
+    @CompileStatic
     void flush() {
         log.info "Flushing database (${breakpoints.size()} breakpoints to write)"
         
