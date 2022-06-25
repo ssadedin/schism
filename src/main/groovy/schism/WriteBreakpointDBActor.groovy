@@ -245,6 +245,7 @@ class WriteBreakpointDBActor extends RegulatingActor {
         for(SAM bam in bams) {
             db.execute """
                 insert into sample (id, source) values (${bam.samples[0]}, ${bam.samFile.absolutePath})
+                on conflict do nothing
             """
         }
     }
