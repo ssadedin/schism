@@ -158,7 +158,7 @@ class BreakpointExtractor {
             
         ProgressCounter counter = new ProgressCounter(withRate:true, withTime:true)
         counter.extra = {
-            "Breakpoints: $countInteresting, anomalous=$filter.countAnomalous, chimeric=$filter.countChimeric, lowqual=$filter.countLowQual, adapter=$filter.countAdapter noisy=$countNoisy contam=$filter.countContam softclippedBuffer=$windowStats.softClipped"
+            "Breakpoints ($sampleId): $countInteresting, anomalous=$filter.countAnomalous, chimeric=$filter.countChimeric, lowqual=$filter.countLowQual, adapter=$filter.countAdapter noisy=$countNoisy contam=$filter.countContam softclippedBuffer=$windowStats.softClipped"
         }
         
         windowStats.startPosition = region.from + halfWindowSize
