@@ -181,20 +181,20 @@ class BreakpointExtractor {
                  
             List<SAMRecord> reads = window[pos]
             
-            if(reads?.any { it.readName == debugRead }) {
-                log.info "DEBUG READ AT POS: " + pos
-            }
+//            if(reads?.any { it.readName == debugRead }) {
+//                log.info "DEBUG READ AT POS: " + pos
+//            }
             
             if(noiseState.update(windowStats, readWindow)) {
-                if(pos == debugPosition) {
-                    log.info "Debug position $pos is excluded by noise: " + noiseState + " window = " + readWindow
-                    log.info "Excluding reads are: "
-                    readWindow.window.grep { Map.Entry e -> ((List)e.value).size()>1}.collect { entry ->
-                        Map.Entry e = (Map.Entry)entry
-                        List<SAMRecord> noiseReads = (List<SAMRecord>)e.value
-                        log.info "Reads: " + noiseReads*.readName
-                    }
-                }
+//                if(pos == debugPosition) {
+//                    log.info "Debug position $pos is excluded by noise: " + noiseState + " window = " + readWindow
+//                    log.info "Excluding reads are: "
+//                    readWindow.window.grep { Map.Entry e -> ((List)e.value).size()>1}.collect { entry ->
+//                        Map.Entry e = (Map.Entry)entry
+//                        List<SAMRecord> noiseReads = (List<SAMRecord>)e.value
+//                        log.info "Reads: " + noiseReads*.readName
+//                    }
+//                }
                 ++countNoisy
                 return
             }
@@ -217,9 +217,9 @@ class BreakpointExtractor {
                 :
                     localReads
                 
-            if(pos == debugPosition) {
-                println "Debug reads are: $readsToSend"
-            }
+//            if(pos == debugPosition) {
+//                println "Debug reads are: $readsToSend"
+//            }
             
             if(!readsToSend || readsToSend.isEmpty()) 
                 return
