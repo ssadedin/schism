@@ -20,10 +20,12 @@
 /////////////////////////////////////////////////////////////////////////////////
 package schism
 
+import gngs.AcknowledgeableMessage
 import gngs.ProgressCounter
 import gngs.ReadWindow
 import gngs.Region
 import gngs.Regions
+import gngs.RegulatingActor
 import gngs.SAM
 import groovy.transform.CompileStatic
 import groovy.util.logging.Log
@@ -84,7 +86,7 @@ class BreakpointExtractor {
     
     BreakpointReadFilter filter = new BreakpointReadFilter()
     
-    DefaultActor breakpointListener = null
+    RegulatingActor breakpointListener = null
     
     /**
      * Buffer of reads that were observed previously in window that
@@ -227,7 +229,8 @@ class BreakpointExtractor {
             
             countInteresting += reads.size()
             if(breakpointListener != null) {
-                breakpointListener.send(new BreakpointMessage(chr: region.chr, pos:pos, reads: readsToSend, sample:sampleId))
+                def bpMessage = new BreakpointMessage(chr: region.chr, pos:pos, reads: readsToSend, sample:sampleId)
+                breakpointListener.sendTo(new AcknowledgeableMessage(bpMessage, breakpointListener.pendingMessageCount))
             }
             
         }, filter.&isReadInteresting) 
