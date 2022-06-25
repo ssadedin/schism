@@ -174,13 +174,17 @@ class WriteBreakpointDBActor extends RegulatingActor {
         // Flush all the positions prior to the minimum covered position
         Long minPos = extractorPositions*.value.min()
         Map.Entry bpEntry = null
+        int numberWritten = 0
         while((bpEntry = breakpoints.lowerEntry(minPos+1))) {
             BreakpointInfo bp = bpEntry.value
             writeBreakpointToDB(bp)
             
             breakpoints.remove(bpEntry.key)
 //            processed << bpEntry.key
+            ++numberWritten
         }
+        if(numberWritten>0)
+            log.info "Wrote $numberWritten breakpoints to database"
     }
     
     @CompileStatic
@@ -214,7 +218,7 @@ class WriteBreakpointDBActor extends RegulatingActor {
             return
         }
         
-        log.info "Writing position $bp.id to db with $bp.obs observations from $bp.sampleCount samples"
+        log.fine "Writing position $bp.id to db with $bp.obs observations from $bp.sampleCount samples"
         
         String ref = null
         if(reference) {
