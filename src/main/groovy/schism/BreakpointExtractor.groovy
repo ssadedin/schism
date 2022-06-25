@@ -94,18 +94,21 @@ class BreakpointExtractor {
      */
     TreeMap<Integer, List<SAMRecord>> aheadCache = new TreeMap()
     
+    int regionIndex = -1
+    
     String sampleId = null
     
-    BreakpointExtractor(Map options=[:],SAM bam) {
-        this(options,bam,bam.samples[0])
+    BreakpointExtractor(Map options=[:],SAM bam, int regionIndex) {
+        this(options,bam,bam.samples[0], regionIndex)
     }
     
-    BreakpointExtractor(Map options=[:],SAM bam, String sampleId) {
+    BreakpointExtractor(Map options=[:],SAM bam, String sampleId, int regionIndex) {
         if((bam.samples.unique().size()>1) && !options.allowMultiSample)
             throw new IllegalArgumentException("This tool only supports single-sample bam files")
         
         this.bam = bam
         this.sampleId = sampleId
+        this.regionIndex = regionIndex
     }
     
     /**
@@ -156,9 +159,9 @@ class BreakpointExtractor {
         // Running count of how many soft clipped reads were observed in the window
         int windowSoftClips = 0
             
-        ProgressCounter counter = new ProgressCounter(withRate:true, withTime:true)
+        ProgressCounter counter = new ProgressCounter(log: log, withRate:true, withTime:true)
         counter.extra = {
-            "Breakpoints ($sampleId): $countInteresting, anomalous=$filter.countAnomalous, chimeric=$filter.countChimeric, lowqual=$filter.countLowQual, adapter=$filter.countAdapter noisy=$countNoisy contam=$filter.countContam softclippedBuffer=$windowStats.softClipped"
+            "$sampleId,$regionIndex,$region: $countInteresting bp, anom=$filter.countAnomalous, chimeric=$filter.countChimeric, lowqual=$filter.countLowQual, adapter=$filter.countAdapter noisy=$countNoisy contam=$filter.countContam softclippedBuffer=$windowStats.softClipped"
         }
         
         windowStats.startPosition = region.from + halfWindowSize
