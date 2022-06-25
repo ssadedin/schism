@@ -77,7 +77,7 @@ class ExtractInterestingReads {
         List<BreakpointExtractor> bpes = [opts.bams,opts.os].transpose().collect { bamFile,outputFileName ->
             SAM bam = new SAM(bamFile)
             File outputFile = new File(outputFileName)
-            BreakpointExtractor bpe = new BreakpointExtractor(bam)
+            BreakpointExtractor bpe = new BreakpointExtractor(bam, 0)
             bpe.breakpointListener = new WriteExtractedBAMActor(bam, outputFile)
             bpe.breakpointListener.start()
             setOptions(bpe, opts)

@@ -373,8 +373,9 @@ class FindNovelBreakpoints extends DefaultActor {
     }
     
     void runOverRegions(Iterable<Region> includedRegions, failHard=true) {
+        int regionIndex = 0
         for(region in includedRegions) {
-            def bpe = new BreakpointExtractor(bam, allowMultiSample: options.multi)
+            def bpe = new BreakpointExtractor(bam, regionIndex, allowMultiSample: options.multi)
             if(this.options.debugpos)
                 bpe.debugPosition = this.options.debugpos.toInteger()
                 
@@ -387,6 +388,8 @@ class FindNovelBreakpoints extends DefaultActor {
             if(options.minclip)
                 bpe.filter.minSoftClippedBases = options.minclip.toInteger()
                 
+            ++regionIndex;
+            
             try {
                 bpe.run(region)
             } catch (Exception e) {

@@ -247,7 +247,7 @@ class CreateBreakpointDB {
                 SAM bam = bamSampleIdPair[0]
                 String sampleId = bamSampleIdPair[1]
                 
-                BreakpointExtractor bpExtractor = new BreakpointExtractor(bam, sampleId) 
+                BreakpointExtractor bpExtractor = new BreakpointExtractor(bam, sampleId, subRegionCount) 
                 bpExtractor.breakpointListener = dbWriter
                 bpExtractor.filter.filterLog = filterLog
                 if(verbose)
