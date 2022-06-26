@@ -233,7 +233,8 @@ class BreakpointExtractor {
             countInteresting += reads.size()
             if(breakpointListener != null) {
                 def bpMessage = new BreakpointMessage(chr: region.chr, pos:pos, reads: readsToSend, sample:sampleId)
-                breakpointListener.sendTo(new AcknowledgeableMessage(bpMessage, breakpointListener.pendingMessageCount))
+//                breakpointListener.sendTo(new AcknowledgeableMessage(bpMessage, breakpointListener.pendingMessageCount))
+                breakpointListener.sendTo(bpMessage)
             }
             
         }, filter.&isReadInteresting) 
