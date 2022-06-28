@@ -34,6 +34,7 @@ import gngs.ProgressCounter
 import gngs.RefGenes
 import gngs.Region
 import gngs.Regions
+import gngs.RegulatingActor
 import gngs.SAM
 import gngs.Utils
 import gngs.XPos
@@ -51,7 +52,7 @@ import trie.TrieQuery
  * 
  * @author ssadedin@broadinstitute.org
  */
-class FindNovelBreakpoints extends DefaultActor {
+class FindNovelBreakpoints extends RegulatingActor {
     
     static Logger log = Logger.getLogger("FindNovelBreakpoints")
     
@@ -136,28 +137,24 @@ class FindNovelBreakpoints extends DefaultActor {
     FindNovelBreakpoints() {
     }
     
-    /**
-     * Aysynchronous callback to receive messages about discovered breakpoints
-     */
+   
+    @Override
     @CompileStatic
-    void act() {
-        loop {
-            react { msg ->
-                if(msg instanceof BreakpointMessage) {
-                    processBreakpoint(msg)
-                }
-                else
-                if(String.valueOf(msg).startsWith("phase:")) {
-                    this.phase = String.valueOf(msg).replaceAll('^phase:','')
-                }
-                else
-                if(msg == "end") {
-                    terminate()
-                    this.phase = "finished"
-                }
-            }
+    public void process(Object msg) {
+        if(msg instanceof BreakpointMessage) {
+            processBreakpoint(msg)
+        }
+        else
+        if(String.valueOf(msg).startsWith("phase:")) {
+            this.phase = String.valueOf(msg).replaceAll('^phase:','')
+        }
+        else
+        if(msg == "end") {
+            terminate()
+            this.phase = "finished"
         }
     }
+    
     
     Map<String,BreakpointInfo> breakpointPartners = [:]
     
@@ -874,4 +871,5 @@ class FindNovelBreakpoints extends DefaultActor {
 
         return new File(dbDir).listFiles().grep { it.name.endsWith('.db') }*.absolutePath
     }
+
 }
