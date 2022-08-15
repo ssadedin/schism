@@ -472,9 +472,11 @@ class FindNovelBreakpoints extends RegulatingActor {
         log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
         RefGenes refGene
         
-        if(opts.refgene)
+        if(opts.refgene) {
             refGene = new RefGenes(opts.refgene)
 
+        }
+        else
         if(genomeBuild?.startsWith('hg') || genomeBuild.startsWith('GRCh'))
             refGene = RefGenes.download(genomeBuild)
             
