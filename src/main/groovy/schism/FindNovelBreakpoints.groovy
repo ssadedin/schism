@@ -871,7 +871,7 @@ class FindNovelBreakpoints extends RegulatingActor {
                     log.warning "Gene $gene not found in RefSeq database"
                 }
                 else {
-                    log.info "Gene $gene translated to $geneRegion"
+                    log.fine "Gene $gene translated to $geneRegion"
                     regions.addRegion(geneRegion)
                 }
             }
