@@ -506,7 +506,14 @@ class FindNovelBreakpoints extends RegulatingActor {
      * @param args
      */
     static Cli getCliParser() {
-        Cli cli = new Cli(usage: "FindNovelBreakpoints <options>")
+        Cli cli = new Cli(usage: "FindNovelBreakpoints <options>") 
+        
+        cli.header =
+            """
+            Scans a sample for rare or novel genomic breakpoints by 
+            comparison to a control database
+            """.stripIndent()
+
         cli.with {
             bam 'BAM file to scan', args: Cli.UNLIMITED, required:true
             db 'Breakpoint database(s)', args:Cli.UNLIMITED, required:false
