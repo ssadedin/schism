@@ -176,7 +176,16 @@ class FindNovelBreakpoints extends RegulatingActor {
     private final static long debugPos = 101791685
 //    private final static long debugPos = 101791695
     
+    
+    ProgressCounter progress = new ProgressCounter(withTime: false, withRate: true, timeInterval:4000, log:log, extra: {
+        "Identified total breakpoints=$total nonFiltered=$nonFiltered, errors=$errorCount"
+    })
+    
+    @CompileStatic
     void processBreakpoint(BreakpointMessage msg) {
+
+        progress.count()
+
         ++total
         
         boolean verbose = false
