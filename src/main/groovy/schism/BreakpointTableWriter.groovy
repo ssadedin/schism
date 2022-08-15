@@ -191,7 +191,8 @@ class BreakpointTableWriter {
             
             output.println(breakpointLine.join('\t'))
             
-            genes.addAll(bp.genes)
+            if(bp.genes)
+                genes.addAll(bp.genes)
             
             if(jsonWriter) {
                 
