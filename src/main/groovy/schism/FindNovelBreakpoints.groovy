@@ -471,8 +471,14 @@ class FindNovelBreakpoints extends RegulatingActor {
             
         log.info "Genome build appears to be ${genomeBuild} - if this is not correct, please re-run with -genome"
         RefGenes refGene
+        
+        if(opts.refgene)
+            refGene = new RefGenes(opts.refgene)
+
         if(genomeBuild?.startsWith('hg') || genomeBuild.startsWith('GRCh'))
             refGene = RefGenes.download(genomeBuild)
+            
+        return refGene
     }
     
     /**
@@ -510,6 +516,7 @@ class FindNovelBreakpoints extends RegulatingActor {
             maxsc 'Maximum sample count of breakpoints to report (default=10)', args: 1, required: false
             region 'Region of genome to analyse', args:Cli.UNLIMITED, required:false
             ref "Reference sequence (optional) to annotate reference sequence at each breakpoint (use 'auto' to try and find it automatically via various means)", args:1, required: false
+            refgene 'Use given refGene database (otherwise will attempt to download from UCSC)', args: 1, required: false
             xs 'Exclude given samples from sample counts', args:Cli.UNLIMITED, required:false
             adapter 'Set sequence used to remove adapter contamination', args:1, required:false
             pad 'Number of base pairs to pad any regions specified with', args:1, required: false
