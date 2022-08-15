@@ -153,6 +153,9 @@ class FindNovelBreakpoints extends RegulatingActor {
             terminate()
             this.phase = "finished"
         }
+        else {
+            log.warning("Unexpected message: $msg")
+        }
     }
     
     
@@ -315,7 +318,7 @@ class FindNovelBreakpoints extends RegulatingActor {
     /**
      * Run the analysis for the configured BAM file over the given regions.
      */
-    void run(Regions regionsToAnalyse=null) {
+    void findBreakpoints(Regions regionsToAnalyse=null) {
         
         log.info "Searching for breakpoints supported by at least ${minDepth} reads and observed in fewer than ${maxSampleCount} samples in control database"
         log.info "Regions provided? " + regionsToAnalyse
@@ -346,7 +349,7 @@ class FindNovelBreakpoints extends RegulatingActor {
         this.phase = "discover"
         this.runOverRegions(includedRegions)
         
-        this.send "phase:extend"
+        this.sendTo "phase:extend"
        
         while(phase != "extend") {
             Thread.sleep(100)
@@ -365,7 +368,7 @@ class FindNovelBreakpoints extends RegulatingActor {
             log.info "Exploration of extended regions is disabled"
         }
         
-        this.send "end"
+        this.sendTo "end"
         this.join()
     }
     
@@ -689,11 +692,13 @@ class FindNovelBreakpoints extends RegulatingActor {
                 regions = null
             }
                 
-            FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet).start()
-    		try {
+            FindNovelBreakpoints fnb = new FindNovelBreakpoints(opts, bamFilePath, databaseSet)
+            fnb.start()
+            
+            try {
                 fnb.reference = resolveReference(opts)
     	        fnb.refGene = refGene
-    	        fnb.run(regions)
+    	        fnb.findBreakpoints(regions)
                 log.info "Analysis of $bamFilePath complete"
     		}
     		catch(Exception e) {
