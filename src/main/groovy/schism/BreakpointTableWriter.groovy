@@ -101,9 +101,7 @@ class BreakpointTableWriter {
             File outFile = new File(htmlDir, asset)
             log.info "Copy: $asset => $outFile"
             FindNovelBreakpoints.class.classLoader.getResourceAsStream(asset).withStream { ins ->
-                outFile.withOutputStream { outs -> 
-                    Files.copy(ins, outs)
-                }
+                Files.copy(ins, outFile.toPath())
             }
         }
     }

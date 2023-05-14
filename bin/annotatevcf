@@ -2,7 +2,7 @@
 
 BASE=$(cd `dirname $0`/..; pwd)
 
-GROOVY_HOME="$BASE/tools/groovy/2.5.13"
+GROOVY_HOME="$BASE/tools/groovy/3.0.10"
 CP="$BASE/lib/*:$BASE/src/main/groovy"
 
 : ${JAVA_MEM:="8g"}

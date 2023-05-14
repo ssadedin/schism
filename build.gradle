@@ -4,7 +4,7 @@ apply plugin: 'java'
 project.ext {
     VERSION="0.0.1"
     STAGE="build/stage/groovy-ngs-utils-$VERSION"
-    GROOVY_VERSION="2.5.13"
+    GROOVY_VERSION="3.0.10"
 }
 
 repositories {
