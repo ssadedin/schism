@@ -298,7 +298,6 @@ class FindNovelBreakpoints extends RegulatingActor {
             return -1
         }
         
-        
         IntegerStats qualStats = new IntegerStats(10,msg.reads*.mappingQuality)
         
         // No reads greater than 2?
@@ -489,7 +488,7 @@ class FindNovelBreakpoints extends RegulatingActor {
      * @param opts
      * @return  a FASTA instance representing the reference, or null
      */
-    static FASTA resolveReference(OptionAccessor opts) {
+    static FASTA resolveReference(@SuppressWarnings("deprecation") OptionAccessor opts) {
         if(opts.ref) {
             if(opts.ref == "auto") {
                 // hack: if we are using CRAM we can just use the same reference as for that.
