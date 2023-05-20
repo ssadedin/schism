@@ -694,14 +694,16 @@ Vue.component('BreakpointsView', {
                     this.breakpointTable.destroy()
                 }
                 
-                this.breakpointTable = $('#breakpoint-table').DataTable( {
-                    data: this.breakpoints,
-                    createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
-                    columns: TABLE_COLUMNS,
-                    pageLength: 15,
-                    order: [ [1, 'asc'], [2, 'asc'] ]
-                } );
-                
+                window.setTimeout(() =>  {
+                    this.breakpointTable = $('#breakpoint-table').DataTable( {
+                        data: this.breakpoints,
+                        createdRow: function(row,data,dataIndex) { me.createBreakpointRow(row,data,dataIndex) },
+                        columns: TABLE_COLUMNS,
+                        pageLength: 15,
+                        order: [ [1, 'asc'], [2, 'asc'] ]
+                    } );
+                }, 100)
+
                 $('#breakpoint-table').css('width','100%')
                 
                 if(oldSearchText) {
