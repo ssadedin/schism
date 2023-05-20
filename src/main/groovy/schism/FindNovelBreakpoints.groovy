@@ -757,7 +757,7 @@ class FindNovelBreakpoints extends RegulatingActor {
         log.info(" Summary ".center(100,"="))
         log.info "Unfiltered breakpoint candidates: " + total
         log.info "Common breakpoints: " + tooCommon
-        log.info "Promiscuous breakpoints: " + tooCommon
+        log.info "Promiscuous breakpoints: " + tooPromiscuous
         log.info "Reportable breakpoints: " + nonFiltered
         log.info "Partnered breakpoints: " + breakpointConnector.partnered
         log.info("="*100)
