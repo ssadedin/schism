@@ -43,6 +43,7 @@ import groovy.transform.CompileStatic
 import groovyx.gpars.GParsPool
 import groovyx.gpars.actor.DefaultActor
 import htsjdk.samtools.SAMRecord;;
+import htsjdk.samtools.SAMSequenceRecord
 import trie.TrieNode
 import trie.TrieQuery
 
@@ -794,6 +795,16 @@ class FindNovelBreakpoints extends RegulatingActor {
      */
     static Regions resolveRegions(RefGenes refGene, SAM bam, OptionAccessor opts) {
         Regions regions = null
+        
+        Set<String> contigsWithReads = bam.withReader {  r ->
+            r.fileHeader.sequenceDictionary.sequences.findAll {
+                bam.getRecordCount(it.sequenceIndex)
+            }
+            .collect { SAMSequenceRecord ssr ->
+                ssr.contig
+            } as Set
+        }
+        
         if(opts.regions) {
             
             regions = new Regions()
@@ -812,9 +823,11 @@ class FindNovelBreakpoints extends RegulatingActor {
                         region = new Region(regionValue, 0..bam.contigs[opts.region])
                     }
                 }
-                if(region)
+
+                if(region && contigsWithReads.contains(region.chr)) {
                     regions.addRegion(region)
-                log.info "Added region to scan: $region"
+                    log.info "Added region to scan: $region"
+                }
             }
         }
         
@@ -837,9 +850,14 @@ class FindNovelBreakpoints extends RegulatingActor {
                 return new BED(opts.mask).load().reduce()
             }
             else
-            return bam.contigs.collect { chr, chrSize ->
-                new Region(chr, 0, chrSize)
-            } as Regions 
+              return bam.contigs.findAll { e ->
+                                     e.key in contigsWithReads
+                                }
+                                .collect { chr, chrSize ->
+                                    new Region(chr, 0, chrSize)
+                                }.grep { Region r ->
+                                    !r.isMinorContig()
+                                } as Regions 
         }
             
         // Flatten the regions after so we don't process the same region multiple times
