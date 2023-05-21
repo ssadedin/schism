@@ -601,7 +601,7 @@ var TABLE_COLUMNS = [
 
        return row.chr + ':' + row.start + partnerInfo
    }},
-   { title: 'Individual', data: 'sample', className: 'sample' },
+   { title: 'Individuals', data: 'sample', className: 'sample', render: (data,type,row) => Object.keys(row.sample).join(", ") },
    { title: 'Samples', data: 'sample_count', className: 'sample_count' },
    { title: 'Sample Obs', data: 'depth', className: 'depth' },
    { title: 'Samples', data: 'samples', className: 'samples', render: function(data,type,row) {

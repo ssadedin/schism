@@ -53,6 +53,7 @@ import trie.TrieQuery
  * 
  * @author ssadedin@broadinstitute.org
  */
+@SuppressWarnings("deprecation")
 class FindNovelBreakpoints extends RegulatingActor {
     
     static Logger log = Logger.getLogger("FindNovelBreakpoints")
@@ -196,12 +197,18 @@ class FindNovelBreakpoints extends RegulatingActor {
         }
             
         int freq = isFiltered(msg)
+        
+       
         if(freq < 0)
             return
             
-        try {
+        log.info "Frequency of $msg.pos is $freq"
+
+         try {
             Long bpId = XPos.computePos(msg.chr, msg.pos)
             
+            // Note the sample count here is from the database; it does not reflect the 
+            // other samples that may be getting scanned as part of the same operation here
             BreakpointInfo bpInfo = new BreakpointInfo(id: bpId, chr: msg.chr, pos: msg.pos, sampleCount: freq)
     
             // Check if any other breakpoint ties to this one
@@ -539,6 +546,7 @@ class FindNovelBreakpoints extends RegulatingActor {
             debugread 'Specify a read to write verbose informationa about', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
+            json 'Writer structured output in JSON format to given file', args:1, required: false, type: File
             genome 'Specify genome build (if not specified, determined automatically)', args:1, required:false
             n 'Number of threads to use', args:1, required:false
             localBamPath 'Prefix to path to BAM files, to enable loading in the HTML interface via IGV', args:1, required: false
@@ -579,7 +587,7 @@ class FindNovelBreakpoints extends RegulatingActor {
         }
     }
     
-    static processMultiBams(OptionAccessor opts, List<String> bamFilePaths, List<String> dbFiles) {
+    static void processMultiBams(OptionAccessor opts, List<String> bamFilePaths, List<String> dbFiles) {
         
         log.info "Analying BAM Files: $bamFilePaths"
         
@@ -633,7 +641,7 @@ class FindNovelBreakpoints extends RegulatingActor {
      * 
      */
     static Map<Long, BreakpointInfo> mergeBreakpointInfos(List<List<BreakpointInfo>> breakpoints) {
-        log.info "Merging ${breakpoints*.size().sum()} breakpoints from ${breakpoints.size()} sets"
+        log.info "Merging ${breakpoints*.size()} breakpoints from ${breakpoints.size()} sets"
         Map<Long, BreakpointInfo> result = new TreeMap()
         ProgressCounter progress = new ProgressCounter(withTime: true, withRate: true)
         for(List<BreakpointInfo> bpInfos in breakpoints) {

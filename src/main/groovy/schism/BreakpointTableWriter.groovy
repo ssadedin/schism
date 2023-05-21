@@ -1,5 +1,6 @@
 package schism
 import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.text.NumberFormat;
 import java.util.regex.Pattern
 import java.util.stream.Stream
@@ -67,6 +68,11 @@ class BreakpointTableWriter {
             "cdsdist"
     ]
         
+    private static List<String> JSON_HEADERS = headers + ["samples"]
+    
+    
+    private static SAMPLE_HEADER_INDEX = JSON_HEADERS.indexOf("sample")
+
     static List<String> HTML_ASSETS = [
         'DOMBuilder.dom.min.js',
         'd3.js',
@@ -101,7 +107,7 @@ class BreakpointTableWriter {
             File outFile = new File(htmlDir, asset)
             log.info "Copy: $asset => $outFile"
             FindNovelBreakpoints.class.classLoader.getResourceAsStream(asset).withStream { ins ->
-                Files.copy(ins, outFile.toPath())
+                Files.copy(ins, outFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
         }
     }
@@ -123,7 +129,8 @@ class BreakpointTableWriter {
         NumberFormat percFormat = NumberFormat.getPercentInstance()
         percFormat.maximumFractionDigits = 1
         
-        Writer jsonWriter = null
+        Writer jsWriter = null
+        Writer jsonWriter = options.json ? new FileWriter(options.json.path) : null
         File htmlFile = null
         if(options.html) {
             
@@ -131,26 +138,27 @@ class BreakpointTableWriter {
             copyStaticAssetsToHTMLDir(htmlDir)
             
             htmlFile = new File(htmlDir, 'index.html').absoluteFile
-            jsonWriter = new File(htmlDir, 'breakpoints.js').newWriter()
+            jsWriter = new File(htmlDir, 'breakpoints.js').newWriter()
             if(options.localBamPath) {
-                jsonWriter.println('defaultBamFilePrefix = ' + JsonOutput.toJson(options.localBamPath) + ';')
+                jsWriter.write('defaultBamFilePrefix = ' + JsonOutput.toJson(options.localBamPath) + ';//NODJSON\n')
             }
             else {
-                jsonWriter.println('defaultBamFilePrefix = null;')
+                jsWriter.write('defaultBamFilePrefix = null;//NOJSON\n')
             }
             
             Map<String,String> bamFilesBySample = bams.collectEntries { 
                 [it.samples[0], (options.localBamPath?:'') + it.samFile.name]
             }
-            jsonWriter.println('bamFiles = ' + JsonOutput.toJson(bamFilesBySample))
+            jsWriter.write('bamFiles=' + JsonOutput.toJson(bamFilesBySample) + '//NOJSON\n')
                 
-            jsonWriter.println('js_load_data = [')
+            jsWriter.write('js_load_data = //NOJSON\n[\n')
         }
+        
+        jsonWriter?.write('[\n')
                 
         output.println(headers.join('\t'))
         
-        List<String> jsonHeaders = headers + ["samples"]
-        
+       
         boolean first = true
         int count = 0
         Set<String> genes = new HashSet()
@@ -165,70 +173,49 @@ class BreakpointTableWriter {
             
             boolean verbose = false
             
+            // TODO: put this in a loop and write out each sample's obs separately
+            // This is necesarry because they have different levels of support etc
+            // And we also want to add inheritance information here
+//            BreakpointSampleInfo bpo = bp.observations[0]
 
-            // Note that in this case we are searching only a single sample,
-            // so each breakpoint will have exactly 1 observation
-            BreakpointSampleInfo bpo = bp.observations[0]
-           
-            // if there is a consensus among the soft clip, check if there is a partner sequence
-            // inthe database
-            BreakpointInfo partner = bpo.partner
-            
-            String sampleId = bpo.sample
-            if(sampleIdMask)
-                sampleId = sampleId.replaceAll(sampleIdMask, '$1')
-            
-            // Check for overlapping genes
-            List breakpointLine = [bp.chr, bp.pos, bp.pos+1, sampleId, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
-            if(refGene) {
-                bp.annotateGenes(refGene, 5000)
-                String geneList = bp.genes.join(",")
-                breakpointLine.add(geneList)
-                breakpointLine.add(bp.exonDistances.join(","))
-            }
-            
-            output.println(breakpointLine.join('\t'))
-            
-            if(bp.genes)
-                genes.addAll(bp.genes)
-            
-            if(jsonWriter) {
+            List breakpointLine  
+            for(bpo in bp.observations) {
+               
+                // if there is a consensus among the soft clip, check if there is a partner sequence
+                // inthe database
+                BreakpointInfo partner = bpo.partner
                 
-                if(count)
-                    jsonWriter.println(',')
+                String sampleId = bpo.sample
+                if(sampleIdMask)
+                    sampleId = sampleId.replaceAll(sampleIdMask, '$1')
                 
+                // Check for overlapping genes
+                breakpointLine = [bp.chr, bp.pos, bp.pos+1, sampleId, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
                 if(refGene) {
-                    breakpointLine[-2] = bp.genes
-                    breakpointLine[-1] = bp.exonDistances
-                }
-                else {
-                   breakpointLine.add('') 
-                   breakpointLine.add('') 
+                    bp.annotateGenes(refGene, 5000)
+                    String geneList = bp.genes.join(",")
+                    breakpointLine.add(geneList)
+                    breakpointLine.add(bp.exonDistances.join(","))
                 }
                 
-                // if less than SAMPLE_ANNOTATION_LIMIT samples, then find the samples
-                // and annotate them
-                // TODO: do this in background while search is running so we don't slow down this process?
-                List<String> samples
-                if(bp.sampleCount < SAMPLE_ANNOTATION_LIMIT) {
-                    samples = databases.collectFromDbs(bp.chr, bp.pos) { Sql db ->
-                        db.rows("""select sample from breakpoint_observation where bp_id = $bp.id limit $SAMPLE_ANNOTATION_LIMIT""")*.sample
-                    }.sum()
-                }
+                output.println(breakpointLine.join('\t'))
                 
-                if(samples == null)
-                    samples = []
-                
-                jsonWriter.print(
-                    JsonOutput.toJson(
-                        [jsonHeaders, breakpointLine + [samples]].transpose().collectEntries()
-                    ) 
-                )
+                if(bp.genes)
+                    genes.addAll(bp.genes)
                 
             }
-            progress.count()
-            
+
+            if(jsWriter) {
+                if(count) {
+                    jsWriter.write(',\n')
+                    jsonWriter?.write(',\n')
+                }
+
+                writeJSONLine(jsWriter, jsonWriter, breakpointLine, bp)
+            }
+
             ++count
+            progress.count()
         }
         
         if(options.bed) {
@@ -239,14 +226,63 @@ class BreakpointTableWriter {
             }
         }
         
-        
+        if(jsWriter) {
+            jsWriter.write('\n]\n')
+            writeGeneInfo(jsWriter,genes)
+            jsWriter.close()
+        }
+
         if(jsonWriter) {
-            jsonWriter.println('\n]')
-            writeGeneInfo(jsonWriter,genes)
+            jsonWriter.write('\n]\n')
             jsonWriter.close()
         }
-        
+         
         progress.end()
+    }
+
+    private void writeJSONLine(Writer jsWriter, Writer jsonWriter, List breakpointLine, BreakpointInfo bp) {
+
+        if(refGene) {
+            breakpointLine[-2] = bp.genes
+            breakpointLine[-1] = bp.exonDistances
+        }
+        else {
+            breakpointLine.add('')
+            breakpointLine.add('')
+        }
+
+        // if less than SAMPLE_ANNOTATION_LIMIT samples, then find the samples
+        // and annotate them
+        // TODO: do this in background while search is running so we don't slow down this process?
+        List<String> samples
+        if(bp.sampleCount < SAMPLE_ANNOTATION_LIMIT) {
+            samples = databases.collectFromDbs(bp.chr, bp.pos) { Sql db ->
+                db.rows("""select sample from breakpoint_observation where bp_id = $bp.id limit $SAMPLE_ANNOTATION_LIMIT""")*.sample
+            }.sum()
+        }
+
+        if(samples == null)
+            samples = []
+            
+        // Because the JSON can be structured, we prefer to put all the individuals where the breakpoint was
+        // identified into the same sample header rather than writing multiple lines
+        breakpointLine[SAMPLE_HEADER_INDEX] = bp.observations.collectEntries { BreakpointSampleInfo info ->
+            [ info.sample, 
+                [
+                    obs: info.obs,
+                    motif: info.bases,
+                    startClips: info.startClips,
+                    endClips: info.endClips
+                ]
+            ]
+        }
+        
+        String formattedJSON = JsonOutput.toJson([JSON_HEADERS, breakpointLine + [samples]].transpose().collectEntries())
+
+        jsWriter.write(formattedJSON)
+        
+        if(jsonWriter)
+            jsonWriter.write(formattedJSON)
     }
     
     void writeGeneInfo(Writer jsonWriter, Set<String> genes) {
