@@ -212,7 +212,7 @@ class BreakpointExtractor {
             
             List<SAMRecord> localReads = readGroups[CigarOperator.S]?:emptyList
             
-            updateAheadCache(readGroups)
+            updateAheadCache(reads)
                     
             List<SAMRecord> readsToSend = 
                 priorReads ?
@@ -280,9 +280,10 @@ class BreakpointExtractor {
      
             
     @CompileStatic
-    void updateAheadCache(Map<CigarOperator,List<SAMRecord>> readGroups) {
+//    void updateAheadCache(Map<CigarOperator,List<SAMRecord>> readGroups) {
+    void updateAheadCache(List<SAMRecord> readGroups) {
         // Add any bp discovered downstream to the read-ahead-cache
-        readGroups[CigarOperator.M]?.groupBy{it.alignmentEnd}?.each { Integer pos, List<SAMRecord> records ->
+        readGroups.groupBy{it.alignmentEnd}?.each { Integer pos, List<SAMRecord> records ->
 //            println "Add ${records.size()} records to aheadcache at $pos"
             aheadCache.get(pos,[]).addAll(records)
         }
