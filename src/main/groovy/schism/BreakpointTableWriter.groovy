@@ -173,6 +173,16 @@ class BreakpointTableWriter {
             
             boolean verbose = false
             
+            if(refGene) {
+                bp.annotateGenes(refGene, 5000)
+                if(options.maxexondist) {
+                    if(bp.exonDistances.every { it > options.maxexondist }) {
+                        continue
+                    }
+                }
+            }
+            
+            
             // TODO: put this in a loop and write out each sample's obs separately
             // This is necesarry because they have different levels of support etc
             // And we also want to add inheritance information here
@@ -192,7 +202,6 @@ class BreakpointTableWriter {
                 // Check for overlapping genes
                 breakpointLine = [bp.chr, bp.pos, bp.pos+1, sampleId, bpo.obs, bp.sampleCount, fmt.format(bpo.consensusScore/bpo.bases.size()), partner?"$partner.chr:$partner.pos":""]
                 if(refGene) {
-                    bp.annotateGenes(refGene, 5000)
                     String geneList = bp.genes.join(",")
                     breakpointLine.add(geneList)
                     breakpointLine.add(bp.exonDistances.join(","))

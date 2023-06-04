@@ -551,6 +551,7 @@ class FindNovelBreakpoints extends RegulatingActor {
             n 'Number of threads to use', args:1, required:false
             localBamPath 'Prefix to path to BAM files, to enable loading in the HTML interface via IGV', args:1, required: false
             extend 'Enable exploration of extended regions linked to identified breakpoints', args:1, required: false
+            maxexondist 'Maximum distance from an exon to report a breakpoint (no limit)', args:1, type: Integer, required: false
         }
         return cli
     }
