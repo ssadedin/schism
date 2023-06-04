@@ -175,7 +175,7 @@ class FindNovelBreakpoints extends RegulatingActor {
     
     int errorCount = 0
     
-    private final static long debugPos = 101791685
+    private final static long debugPos = 45968115
 //    private final static long debugPos = 101791695
     
     
@@ -195,6 +195,11 @@ class FindNovelBreakpoints extends RegulatingActor {
             println "Debug breakpoint: $msg"
             verbose = true
         }
+        
+        
+        if(msg.pos > 45967200 && msg.pos < 45970722)
+            log.info "Processing breakpoint $msg"
+
             
         int freq = isFiltered(msg)
         
@@ -543,7 +548,7 @@ class FindNovelBreakpoints extends RegulatingActor {
             multi 'Allow multi sample BAM file (treat as single)', required:false
             idmask 'Regular expression to replace samples with first subexpression', args:1, required:false
             debugpos 'Specify a position to write verbose informationa about', args:1, required:false
-            debugread 'Specify a read to write verbose informationa about', args:1, required:false
+            debugread 'Specify a read to write verbose information about', args:1, required:false
             o 'Output file (BED format)', longOpt: 'output', args: 1, required: false
             html 'Create HTML report in given directory', args:1, required: false
             json 'Writer structured output in JSON format to given file', args:1, required: false, type: File
